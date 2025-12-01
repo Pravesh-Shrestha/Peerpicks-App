@@ -77,7 +77,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _SocialCircle(
-          FontAwesomeIcons.facebookF,
+          FontAwesomeIcons.facebook,
           iconColor: Colors.white,
           circleColor: Color(0xFF1877F2),
         ),
