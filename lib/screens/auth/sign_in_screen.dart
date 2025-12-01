@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-// Note: Assuming SignUpScreen is correctly located at this path based on your original import
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+// Note: Assuming SignUpScreen and DashboardScreen are correctly located
 import 'package:peerpicks/screens/auth/sign_up_screen.dart';
+import 'package:peerpicks/screens/home/dashboard_screen.dart';
+// Import the new DashboardScreen
 
 // Define the common color for consistency
 const Color peerPicksGreen = Color(0xFF75A638);
@@ -41,14 +44,24 @@ class _SignInScreenState extends State<SignInScreen> {
     return null;
   }
 
+  // UPDATED: Function to handle form submission and navigate to Dashboard
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
+      // Form is valid, perform sign-in logic (simulated delay)
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Signing in with Email: ${_emailController.text}'),
+        const SnackBar(
+          content: Text('Signing in...'),
           backgroundColor: peerPicksGreen,
+          duration: Duration(seconds: 1),
         ),
       );
+
+      // Navigate to DashboardScreen upon successful sign-in
+      Future.delayed(const Duration(milliseconds: 1200), () {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        );
+      });
     }
   }
 
@@ -93,7 +106,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
                   const SizedBox(height: 50),
 
-                  // EMAIL Label
+                  // EMAIL
                   const Text(
                     "EMAIL",
                     style: TextStyle(
@@ -104,7 +117,6 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // EMAIL Input (High Visibility)
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -112,14 +124,13 @@ class _SignInScreenState extends State<SignInScreen> {
                     style: const TextStyle(color: darkTextColor),
                     cursorColor: peerPicksGreen,
                     decoration: InputDecoration(
-                      hintText: "Enter your email address", // Added placeholder
+                      hintText: "Enter your email address",
                       hintStyle: TextStyle(color: Colors.grey.shade500),
                       suffixIcon: const Icon(
                         Icons.check,
                         color: peerPicksGreen,
                         size: 20,
                       ),
-                      // High visibility design
                       filled: true,
                       fillColor: Colors.grey.shade100,
                       enabledBorder: OutlineInputBorder(
@@ -159,7 +170,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
                   const SizedBox(height: 24),
 
-                  // PASSWORD Label
+                  // PASSWORD
                   const Text(
                     "PASSWORD",
                     style: TextStyle(
@@ -170,7 +181,6 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // PASSWORD Input (High Visibility)
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
@@ -178,14 +188,13 @@ class _SignInScreenState extends State<SignInScreen> {
                     style: const TextStyle(color: darkTextColor),
                     cursorColor: peerPicksGreen,
                     decoration: InputDecoration(
-                      hintText: "Enter your password", // Added placeholder
+                      hintText: "Enter your password",
                       hintStyle: TextStyle(color: Colors.grey.shade500),
                       suffixIcon: const Icon(
                         Icons.remove_red_eye_outlined,
                         color: Colors.grey,
                         size: 20,
                       ),
-                      // High visibility design
                       filled: true,
                       fillColor: Colors.grey.shade100,
                       enabledBorder: OutlineInputBorder(
@@ -296,15 +305,24 @@ class _SignInScreenState extends State<SignInScreen> {
 
                   const SizedBox(height: 60),
 
-                  // Social buttons row
+                  // Social buttons row (using FontAwesome icons with brand colors)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      socialCircle(Icons.facebook),
+                      // Facebook (Blue)
+                      socialCircle(
+                        FontAwesomeIcons.facebookF,
+                        const Color(0xFF1877F2),
+                      ),
                       const SizedBox(width: 20),
-                      socialCircle(Icons.code),
+                      // GitHub (Dark Text Color)
+                      socialCircle(FontAwesomeIcons.github, darkTextColor),
                       const SizedBox(width: 20),
-                      socialCircle(Icons.g_mobiledata),
+                      // Google (Red/Brand Color)
+                      socialCircle(
+                        FontAwesomeIcons.google,
+                        const Color(0xFFDB4437),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 30),
@@ -317,8 +335,8 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  // Helper widget for social icons
-  Widget socialCircle(IconData icon) {
+  // Helper widget for social icons (Updated to accept color)
+  Widget socialCircle(IconData icon, Color iconColor) {
     return Container(
       width: 45,
       height: 45,
@@ -334,7 +352,9 @@ class _SignInScreenState extends State<SignInScreen> {
           ),
         ],
       ),
-      child: Icon(icon, size: 28, color: darkTextColor),
+      child: Center(
+        child: FaIcon(icon, size: 22, color: iconColor), // Use FaIcon
+      ),
     );
   }
 }
