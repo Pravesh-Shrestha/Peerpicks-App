@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-// Note: Assuming SignUpScreen and DashboardScreen are correctly located
 import 'package:peerpicks/screens/auth/sign_up_screen.dart';
-import 'package:peerpicks/screens/home/dashboard_screen.dart';
-// Import the new DashboardScreen
+import 'package:peerpicks/screens/home/home_screen.dart';
 
 // Define the common color for consistency
 const Color peerPicksGreen = Color(0xFF75A638);
@@ -59,7 +57,7 @@ class _SignInScreenState extends State<SignInScreen> {
       // Navigate to DashboardScreen upon successful sign-in
       Future.delayed(const Duration(milliseconds: 1200), () {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       });
     }

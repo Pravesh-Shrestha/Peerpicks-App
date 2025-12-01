@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 // Note: Assuming SignInScreen is correctly located
-import 'sign_in_screen.dart';
 
 // Define the common colors
 const Color peerPicksGreen = Color(0xFF75A638);
