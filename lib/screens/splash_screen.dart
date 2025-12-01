@@ -1,68 +1,42 @@
-// // lib/screens/splash_screen.dart
-
-// import 'package:flutter/material.dart';// Change to SignInScreen if needed
-
-// class SplashScreen extends StatefulWidget {
-//   const SplashScreen({super.key});
-
-// //   @override
-// //   State<SplashScreen> createState() => _SplashScreenState();
-// // }
-
-// // class _SplashScreenState extends State<SplashScreen>
-
-// // @override
-// // Widget build(BuildContext context) {
-// //   return Scaffold(
-// //     backgroundColor: const Color(
-// //       0xFF92E348,
-// //     ), // fallback color in case image fails
-// //     body: Stack(
-// //       children: [
-// //         // Full-screen background image using Image.asset
-// //         Positioned.fill(
-// //           child: Image.asset(
-// //             'assets/images/splash/peer_picks_splash.png', // Your exact splash image
-// //             fit: BoxFit.cover, // Makes it fill the entire screen beautifully
-// //           ),
-// //         ),
-
-// //         // Optional: Add a subtle overlay or logo on top if needed
-// //         // Example (remove if your image already has everything):
-// //         /*
-// //           const Center(
-// //             child: Column(
-// //               mainAxisAlignment: MainAxisAlignment.center,
-// //               children: [
-// //                 Text(
-// //                   "PEER\nPICKS",
-// //                   style: TextStyle(
-// //                     fontSize: 60,
-// //                     fontWeight: FontWeight.bold,
-// //                     color: Colors.white,
-// //                   ),
-// //                   textAlign: TextAlign.center,
-// //                 ),
-// //                 SizedBox(height: 20),
-// //                 Text(
-// //                   "@peer_picks",
-// //                   style: TextStyle(color: Colors.white70, fontSize: 16),
-// //                 ),
-// //               ],
-// //             ),
-// //           ),
-// //           */
-// //       ],
-// //     ),
-
-// }
 import 'package:flutter/material.dart';
+import 'package:peerpicks/screens/auth/sign_in_screen.dart';
+import 'dart:async'; // Required for Timer
+// Assuming the path to your SignInScreen is correct
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Start a 3-second timer
+    Timer(const Duration(seconds: 3), () {
+      // Navigate to the SignInScreen after 3 seconds
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const SignInScreen()),
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const Placeholder();
+    return Scaffold(
+      body: Container(
+        // Ensure the container takes up the whole screen
+        width: double.infinity,
+        height: double.infinity,
+        color: Colors.white, // Match the light theme
+        child: Image.asset(
+          "assets/images/splash/peer_picks_splash.png", // The designated full-screen image path
+          // **Mandatory: Use BoxFit.cover to fill the entire screen**
+          fit: BoxFit.cover,
+        ),
+      ),
+    );
   }
 }

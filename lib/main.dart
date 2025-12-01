@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:peerpicks/screens/auth/sign_in_screen.dart';
+import 'package:peerpicks/screens/splash_screen.dart';
+import "./screens/splash_screen.dart"; // Import the initial splash screen
 
 void main() {
-  runApp(const PeerPicksApp());
+  // Ensure the widget binding is initialized before using assets
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const MyApp());
 }
 
-class PeerPicksApp extends StatelessWidget {
-  const PeerPicksApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Peer Picks',
-      theme: ThemeData(primarySwatch: Colors.green, fontFamily: 'Poppins'),
-      home: const SignInScreen(),
-    );
+    return MaterialApp(home: const SplashScreen());
   }
 }

@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
+// Note: Assuming SignUpScreen is correctly located at this path based on your original import
+import 'package:peerpicks/screens/auth/sign_up_screen.dart';
 
+// Define the common color for consistency
+const Color peerPicksGreen = Color(0xFF75A638);
+const Color darkTextColor = Color(0xFF333333);
+
+// --- Start of SignInScreen with Validation, Larger Logo, and High Visibility Design ---
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
@@ -19,24 +26,18 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
+  // Validation Logic (Email and Password)
   String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Email is required.';
-    }
+    if (value == null || value.isEmpty) return 'Email is required.';
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(value)) {
+    if (!emailRegex.hasMatch(value))
       return 'Please enter a valid email address.';
-    }
     return null;
   }
 
   String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Password is required.';
-    }
-    if (value.length < 6) {
-      return 'Password must be at least 6 characters.';
-    }
+    if (value == null || value.isEmpty) return 'Password is required.';
+    if (value.length < 6) return 'Password must be at least 6 characters.';
     return null;
   }
 
@@ -44,18 +45,24 @@ class _SignInScreenState extends State<SignInScreen> {
     if (_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Signing in with Email: ${_emailController.text} and Password: ${_passwordController.text}',
-          ),
-          backgroundColor: Colors.green,
+          content: Text('Signing in with Email: ${_emailController.text}'),
+          backgroundColor: peerPicksGreen,
         ),
       );
     }
   }
 
+  void _navigateToSignUp() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SignUpScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Container(
           width: double.infinity,
@@ -66,7 +73,7 @@ class _SignInScreenState extends State<SignInScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 30),
 
                   // Title + Logo Row
                   Row(
@@ -77,65 +84,161 @@ class _SignInScreenState extends State<SignInScreen> {
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Color.fromARGB(255, 98, 113, 43),
+                          color: peerPicksGreen,
                         ),
                       ),
-                      Image.asset(
-                        "assets/images/logos/logo.png", // Replace with your image
-                        height: 60,
-                      ),
+                      Image.asset("assets/images/logos/logo.png", height: 80),
                     ],
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 50),
 
-                  // EMAIL
-                  const Text("EMAIL", style: TextStyle(fontSize: 12)),
+                  // EMAIL Label
+                  const Text(
+                    "EMAIL",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: darkTextColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // EMAIL Input (High Visibility)
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     validator: _validateEmail,
+                    style: const TextStyle(color: darkTextColor),
+                    cursorColor: peerPicksGreen,
                     decoration: InputDecoration(
-                      suffixIcon: const Icon(Icons.check),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                      hintText: "Enter your email address", // Added placeholder
+                      hintStyle: TextStyle(color: Colors.grey.shade500),
+                      suffixIcon: const Icon(
+                        Icons.check,
+                        color: peerPicksGreen,
+                        size: 20,
+                      ),
+                      // High visibility design
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(
+                          color: Colors.grey.shade300,
+                          width: 1.0,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: peerPicksGreen,
+                          width: 2.0,
+                        ),
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: Colors.red,
+                          width: 1.0,
+                        ),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: Colors.red,
+                          width: 2.0,
+                        ),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
+                        horizontal: 16,
+                        vertical: 14,
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
-                  // PASSWORD
-                  const Text("PASSWORD", style: TextStyle(fontSize: 12)),
+                  // PASSWORD Label
+                  const Text(
+                    "PASSWORD",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: darkTextColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // PASSWORD Input (High Visibility)
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
                     validator: _validatePassword,
+                    style: const TextStyle(color: darkTextColor),
+                    cursorColor: peerPicksGreen,
                     decoration: InputDecoration(
-                      suffixIcon: const Icon(Icons.visibility_off),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                      hintText: "Enter your password", // Added placeholder
+                      hintStyle: TextStyle(color: Colors.grey.shade500),
+                      suffixIcon: const Icon(
+                        Icons.remove_red_eye_outlined,
+                        color: Colors.grey,
+                        size: 20,
+                      ),
+                      // High visibility design
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(
+                          color: Colors.grey.shade300,
+                          width: 1.0,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: peerPicksGreen,
+                          width: 2.0,
+                        ),
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: Colors.red,
+                          width: 1.0,
+                        ),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: Colors.red,
+                          width: 2.0,
+                        ),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
+                        horizontal: 16,
+                        vertical: 14,
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
 
+                  // Forgot Password Link
                   Align(
                     alignment: Alignment.centerRight,
                     child: Text(
                       "Forgot password?",
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 40),
 
                   // Sign In Button
                   GestureDetector(
@@ -144,48 +247,67 @@ class _SignInScreenState extends State<SignInScreen> {
                       width: double.infinity,
                       height: 50,
                       decoration: BoxDecoration(
-                        color: Colors.black,
+                        color: peerPicksGreen,
                         borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(
+                            color: peerPicksGreen.withOpacity(0.4),
+                            blurRadius: 15,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
                       ),
                       child: const Center(
                         child: Text(
                           "SIGN IN",
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 18),
 
+                  // Sign Up Navigation Link
                   Center(
                     child: GestureDetector(
-                      onTap: () {},
-                      child: const Text(
-                        "Don’t have an account? Sign up.",
-                        style: TextStyle(color: Colors.grey),
+                      onTap: _navigateToSignUp,
+                      child: RichText(
+                        text: const TextSpan(
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                          children: [
+                            TextSpan(text: "Don’t have an account? "),
+                            TextSpan(
+                              text: "Sign up.",
+                              style: TextStyle(
+                                color: peerPicksGreen,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 60),
 
                   // Social buttons row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // Using standard Flutter Icons that closely represent the brands
-                      socialCircle(
-                        Icons.facebook,
-                      ), // Still the standard icon, but clear
+                      socialCircle(Icons.facebook),
                       const SizedBox(width: 20),
-                      socialCircle(
-                        Icons.code,
-                      ), // Using 'code' for a generic programming/dev icon
+                      socialCircle(Icons.code),
                       const SizedBox(width: 20),
-                      socialCircle(Icons.g_mobiledata), // Google icon
+                      socialCircle(Icons.g_mobiledata),
                     ],
                   ),
+                  const SizedBox(height: 30),
                 ],
               ),
             ),
@@ -195,6 +317,7 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
+  // Helper widget for social icons
   Widget socialCircle(IconData icon) {
     return Container(
       width: 45,
@@ -202,8 +325,16 @@ class _SignInScreenState extends State<SignInScreen> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(color: Colors.grey.shade400),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Icon(icon, size: 28),
+      child: Icon(icon, size: 28, color: darkTextColor),
     );
   }
 }
