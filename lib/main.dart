@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/splash_screen.dart';
+import 'package:peerpicks/screens/auth/sign_in_screen.dart';
 
 void main() {
   runApp(const PeerPicksApp());
@@ -14,7 +14,7 @@ class PeerPicksApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Peer Picks',
       theme: ThemeData(primarySwatch: Colors.green, fontFamily: 'Poppins'),
-      home: const SplashScreen(),
+      home: const SignInScreen(),
     );
   }
 }
