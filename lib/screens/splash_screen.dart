@@ -26,13 +26,11 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        // Ensure the container takes up the whole screen
         width: double.infinity,
         height: double.infinity,
-        color: Colors.white, // Match the light theme
+        color: Colors.white,
         child: Image.asset(
-          "assets/images/splash/peer_picks_splash.png", // The designated full-screen image path
-          // **Mandatory: Use BoxFit.cover to fill the entire screen**
+          "assets/images/splash/peer_picks_splash.png",
           fit: BoxFit.cover,
         ),
       ),

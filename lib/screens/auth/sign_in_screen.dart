@@ -3,11 +3,9 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:peerpicks/screens/auth/sign_up_screen.dart';
 import 'package:peerpicks/screens/home/home_screen.dart';
 
-// Define the common color for consistency
 const Color peerPicksGreen = Color(0xFF75A638);
 const Color darkTextColor = Color(0xFF333333);
 
-// --- Start of SignInScreen with Validation, Larger Logo, and High Visibility Design ---
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
@@ -27,7 +25,6 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
-  // Validation Logic (Email and Password)
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) return 'Email is required.';
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
@@ -42,10 +39,8 @@ class _SignInScreenState extends State<SignInScreen> {
     return null;
   }
 
-  // UPDATED: Function to handle form submission and navigate to Dashboard
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
-      // Form is valid, perform sign-in logic (simulated delay)
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Signing in...'),
@@ -54,7 +49,6 @@ class _SignInScreenState extends State<SignInScreen> {
         ),
       );
 
-      // Navigate to DashboardScreen upon successful sign-in
       Future.delayed(const Duration(milliseconds: 1200), () {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -101,9 +95,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       Image.asset("assets/images/logos/logo.png", height: 80),
                     ],
                   ),
-
                   const SizedBox(height: 50),
-
                   // EMAIL
                   const Text(
                     "EMAIL",
@@ -165,9 +157,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 24),
-
                   // PASSWORD
                   const Text(
                     "PASSWORD",
@@ -178,7 +168,6 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
@@ -229,9 +218,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 12),
-
                   // Forgot Password Link
                   Align(
                     alignment: Alignment.centerRight,
@@ -276,9 +263,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 18),
-
                   // Sign Up Navigation Link
                   Center(
                     child: GestureDetector(
@@ -300,9 +285,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 60),
-
                   // Social buttons row (using FontAwesome icons with brand colors)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -333,7 +316,6 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  // Helper widget for social icons (Updated to accept color)
   Widget socialCircle(IconData icon, Color iconColor) {
     return Container(
       width: 45,
