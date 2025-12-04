@@ -21,21 +21,21 @@ class OnboardingFooter extends StatelessWidget {
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(
-            contents.length,
-            (index) => AnimatedContainer(
+          children: List.generate(contents.length, (index) {
+            final isActive = currentPage == index;
+            return AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               margin: const EdgeInsets.symmetric(horizontal: 4.0),
               height: 10.0,
-              width: 10.0,
+              width: isActive ? 25.0 : 10.0,
               decoration: BoxDecoration(
-                color: currentPage == index
-                    ? AppColors.indicatorActive
+                color: isActive
+                    ? AppColors.primaryGreen
                     : AppColors.indicatorInactive,
                 borderRadius: BorderRadius.circular(5),
               ),
-            ),
-          ),
+            );
+          }),
         ),
         SizedBox(height: isTablet ? 60 : 40),
         MyButton(text: contents[currentPage].buttonText, onPressed: nextPage),
