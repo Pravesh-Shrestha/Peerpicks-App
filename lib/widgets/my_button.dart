@@ -11,7 +11,7 @@ class MyButton extends StatelessWidget {
     Key? key,
     required this.text,
     required this.onPressed,
-    this.backgroundColor = AppColors.primaryGreen,
+    this.backgroundColor = const Color.fromARGB(255, 121, 172, 59),
     this.textColor = AppColors.white,
   }) : super(key: key);
 

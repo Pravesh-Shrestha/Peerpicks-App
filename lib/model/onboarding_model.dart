@@ -1,4 +1,3 @@
-// --- 1. DATA MODEL FOR ONBOARDING PAGES ---
 class OnboardingContent {
   final String imagePath;
   final String title;
@@ -15,6 +14,7 @@ class OnboardingContent {
   });
 }
 
+/// UPDATED Content List
 final List<OnboardingContent> contents = [
   OnboardingContent(
     imagePath: 'assets/images/onboarding_1.png',

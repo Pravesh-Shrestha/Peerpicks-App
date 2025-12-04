@@ -13,9 +13,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Start a 3-second timer
     Timer(const Duration(seconds: 3), () {
-      // Navigate to the SignInScreen after 3 seconds
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const OnboardingScreen()),
       );

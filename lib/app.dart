@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:peerpicks/screens/splash_screen.dart';
+import 'package:peerpicks/screens/onboarding/splash_screen.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
