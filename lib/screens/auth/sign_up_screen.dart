@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-// Note: Assuming SignInScreen is correctly located
 
 // Define the common colors
 const Color peerPicksGreen = Color(0xFF75A638);
@@ -69,8 +68,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  // --- Helper Widgets defined locally ---
-
   Widget _buildSocialRow() {
     return const Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -97,7 +94,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  // Updated _buildAuthTextFormField for High Visibility
   Widget _buildAuthTextFormField({
     required TextEditingController controller,
     required String? Function(String?) validator,

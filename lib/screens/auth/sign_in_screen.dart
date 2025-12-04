@@ -319,7 +319,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       // Google (Red/Brand Color)
                       socialCircle(
                         FontAwesomeIcons.google,
-                        const Color(0xFFDB4437),
+                        const Color.fromARGB(255, 0, 0, 0),
                       ),
                     ],
                   ),

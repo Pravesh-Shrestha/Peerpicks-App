@@ -1,28 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:peerpicks/common/app_colors.dart';
 
 class MyButton extends StatelessWidget {
+  final String text;
+  final VoidCallback onPressed;
+  final Color backgroundColor;
+  final Color textColor;
+
   const MyButton({
-    super.key,
+    Key? key,
     required this.text,
     required this.onPressed,
-    this.color,
-  });
-  final String text;
-  final Color? color;
-  final VoidCallback onPressed;
+    this.backgroundColor = AppColors.primaryGreen,
+    this.textColor = AppColors.white,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return Container(
+      // Padding ensures the button doesn't hug the screen edges
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       width: double.infinity,
       child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color ?? Colors.blue,
-          elevation: 8,
-          // padding: EdgeInsets.symmetric(horizontal: 50, vertical: 20),
-        ),
         onPressed: onPressed,
-        child: Text(text, style: TextStyle(color: Colors.white, fontSize: 20)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: backgroundColor,
+          padding: const EdgeInsets.symmetric(vertical: 18.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          elevation: 0,
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }

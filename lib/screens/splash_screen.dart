@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:peerpicks/screens/auth/sign_in_screen.dart';
-import 'dart:async'; // Required for Timer
-// Assuming the path to your SignInScreen is correct
+import 'dart:async';
+import 'package:peerpicks/screens/onboarding/onboarding_screen.dart'; // Required for Timer
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -18,7 +17,7 @@ class _SplashScreenState extends State<SplashScreen> {
     Timer(const Duration(seconds: 3), () {
       // Navigate to the SignInScreen after 3 seconds
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const SignInScreen()),
+        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
       );
     });
   }
