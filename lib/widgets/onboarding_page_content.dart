@@ -14,11 +14,27 @@ class OnboardingPageContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final orientation = MediaQuery.of(context).orientation;
-    final isLandscapeTablet = isTablet && orientation == Orientation.landscape;
+    final mediaQuery = MediaQuery.of(context);
+    final orientation = mediaQuery.orientation;
+    final isLandscape = orientation == Orientation.landscape;
+    final isLandscapeTablet = isTablet && isLandscape;
+
+    // Dynamic text sizes
+    final titleSize = isTablet ? 40.0 : 32.0;
+    final descriptionSize = isTablet ? 20.0 : 18.0;
+
+    // Calculate a height factor for the image in vertical mode
+    // to ensure content fits above the footer.
+    // 0.4 for phone, 0.5 for large phone/small tablet, 0.4 for large tablet
+    double imageHeightFactor = mediaQuery.size.height > 800 ? 0.45 : 0.4;
+    if (isTablet) {
+      imageHeightFactor = isLandscape ? 0.9 : 0.4;
+    }
 
     Widget imageContent = Padding(
-      padding: EdgeInsets.only(top: isLandscapeTablet ? 0 : 20),
+      padding: EdgeInsets.only(
+        top: isLandscapeTablet ? 0 : (isTablet ? 40 : 20),
+      ),
       child: Image.asset(
         content.imagePath,
         fit: BoxFit.contain,
@@ -48,20 +64,20 @@ class OnboardingPageContent extends StatelessWidget {
           Text(
             content.title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.indicatorActive,
-              fontSize: 32,
+              fontSize: titleSize, // Responsive title size
               fontWeight: FontWeight.w900,
               height: 1.2,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isTablet ? 24 : 16),
           Text(
             content.description,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.lightText,
-              fontSize: 18,
+              fontSize: descriptionSize, // Responsive description size
               height: 1.4,
             ),
           ),
@@ -71,26 +87,29 @@ class OnboardingPageContent extends StatelessWidget {
 
     Widget responsiveLayout;
 
-    if (isLandscapeTablet) {
+    if (isLandscapeTablet || isLandscape) {
+      // Horizontal layout for landscape or landscape tablet
       responsiveLayout = Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(flex: 4, child: imageContent),
-          const SizedBox(width: 40),
+          SizedBox(width: isTablet ? 60 : 40),
           Expanded(flex: 6, child: textSection),
         ],
       );
     } else {
+      // Vertical layout for portrait phone/tablet
       responsiveLayout = Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          FractionallySizedBox(
-            heightFactor: isTablet ? 0.40 : 0.35,
+          SizedBox(
+            // Use dynamic height based on screen size for image area
+            height: mediaQuery.size.height * imageHeightFactor,
             child: imageContent,
           ),
-          const SizedBox(height: 30),
+          SizedBox(height: isTablet ? 50 : 30),
           textSection,
         ],
       );
