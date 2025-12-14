@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 ThemeData getApplicationTheme() {
   return ThemeData(
     primarySwatch: Colors.blue,
-    fontFamily: 'OpenSans Regular',
+    fontFamily: 'Roboto-Regular',
     useMaterial3: true,
     appBarTheme: const AppBarTheme(
       centerTitle: true,
@@ -13,7 +13,7 @@ ThemeData getApplicationTheme() {
         fontSize: 20,
         color: Colors.white,
         fontWeight: FontWeight.w600,
-        fontFamily: 'OpenSans Bold',
+        fontFamily: 'Roboto-Bold',
       ),
     ),
   );
