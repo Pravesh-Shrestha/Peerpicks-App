@@ -2,46 +2,51 @@ import 'package:flutter/material.dart';
 
 ThemeData getApplicationTheme() {
   return ThemeData(
-    primarySwatch: Colors.blue,
-    fontFamily: 'OpenSans Regular',
     useMaterial3: true,
+    fontFamily: 'OpenSans Regular',
+
+    colorScheme: const ColorScheme(
+      brightness: Brightness.light,
+
+      // AppBar (green header)
+      primary: Colors.lightGreen,
+      onPrimary: Colors.white,
+
+      // Accent color (purple FAB)
+      secondary: Color(0xFF5E2EFF),
+      onSecondary: Colors.white,
+
+      // Bottom bar background + icons
+      surface: Colors.white, // bottom bar background
+      onSurface: Colors.black, // active icon color
+
+      background: Colors.white,
+      onBackground: Colors.black,
+
+      error: Colors.red,
+      onError: Colors.white,
+    ),
+
+    // AppBar styling
     appBarTheme: const AppBarTheme(
-      centerTitle: true,
+      backgroundColor: Colors.lightGreen,
+      foregroundColor: Colors.white,
       elevation: 0,
-      backgroundColor: Colors.black,
-      titleTextStyle: TextStyle(
-        fontSize: 20,
-        color: Colors.white,
-        fontWeight: FontWeight.w600,
-        fontFamily: 'OpenSans Bold',
-      ),
+      centerTitle: true,
     ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        foregroundColor: Colors.black,
-        textStyle: const TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w500,
-          fontFamily: 'OpenSans Reg',
-        ),
-        backgroundColor: Colors.lightGreen,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-      ),
+
+    // BottomAppBar styling
+    bottomAppBarTheme: const BottomAppBarThemeData(
+      color: Colors.white,
+      elevation: 8,
     ),
-    bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: Colors.black,
-      selectedItemColor: Colors.lightGreen,
-      unselectedItemColor: Colors.white,
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      border: const OutlineInputBorder(),
-      labelStyle: const TextStyle(
-        fontSize: 16,
-        color: Colors.black,
-        fontWeight: FontWeight.w400,
-        fontFamily: 'OpenSans Regular',
-      ),
+
+    // Floating Action Button styling
+    floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      backgroundColor: Color.fromARGB(255, 123, 255, 46), // purple
+      foregroundColor: Colors.white,
+      elevation: 6,
+      shape: CircleBorder(),
     ),
   );
 }
