@@ -15,47 +15,111 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  List<Widget> lstBottomScreen = [
-    const DashboardScreen(),
-    const FavoritesScreen(),
-    const AddReviewScreen(),
-    const NotificationScreen(),
-    const ProfileScreen(),
+  final List<Widget> lstBottomScreen = const [
+    DashboardScreen(),
+    FavoritesScreen(),
+    AddReviewScreen(),
+    NotificationScreen(),
+    ProfileScreen(),
   ];
+
+  void _onTab(int index) {
+    setState(() => _selectedIndex = index);
+  }
+
   @override
   Widget build(BuildContext context) {
+    const Color activeColor = Colors.lightGreen;
+    const Color inactiveColor = Colors.white;
+    const Color fabColor = Colors.lightGreen;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Bottom-Navigation"),
-        centerTitle: true,
-        backgroundColor: Colors.lightGreen,
-      ),
       body: lstBottomScreen[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBarTheme(
-        data: Theme.of(context).bottomNavigationBarTheme,
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: ""),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.favorite),
-              label: "",
-            ),
-            BottomNavigationBarItem(icon: Icon(Icons.add), label: ""),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.notifications),
-              label: "",
-            ),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: ""),
-          ],
-          currentIndex: _selectedIndex,
-          onTap: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _onTab(2),
+        backgroundColor: Colors.lightGreen,
+        foregroundColor: Colors.black,
+        elevation: 6,
+        shape: const CircleBorder(),
+        child: const Icon(Icons.add, size: 36),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+
+      // Bottom bar with notch
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8,
+        color: Colors.black,
+        elevation: 8,
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _NavIcon(
+                icon: Icons.home,
+                index: 0,
+                selectedIndex: _selectedIndex,
+                activeColor: activeColor,
+                inactiveColor: inactiveColor,
+                onTap: () => _onTab(0),
+              ),
+              _NavIcon(
+                icon: Icons.favorite,
+                index: 1,
+                selectedIndex: _selectedIndex,
+                activeColor: activeColor,
+                inactiveColor: inactiveColor,
+                onTap: () => _onTab(1),
+              ),
+              const SizedBox(width: 48), // space for FAB
+              _NavIcon(
+                icon: Icons.notifications,
+                index: 3,
+                selectedIndex: _selectedIndex,
+                activeColor: activeColor,
+                inactiveColor: inactiveColor,
+                onTap: () => _onTab(3),
+              ),
+              _NavIcon(
+                icon: Icons.person,
+                index: 4,
+                selectedIndex: _selectedIndex,
+                activeColor: activeColor,
+                inactiveColor: inactiveColor,
+                onTap: () => _onTab(4),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _NavIcon extends StatelessWidget {
+  final IconData icon;
+  final int index;
+  final int selectedIndex;
+  final Color activeColor;
+  final Color inactiveColor;
+  final VoidCallback onTap;
+
+  const _NavIcon({
+    required this.icon,
+    required this.index,
+    required this.selectedIndex,
+    required this.activeColor,
+    required this.inactiveColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isActive = index == selectedIndex;
+    return IconButton(
+      icon: Icon(icon, color: isActive ? activeColor : inactiveColor, size: 28),
+      onPressed: onTap,
     );
   }
 }
