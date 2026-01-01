@@ -1,213 +1,226 @@
 import 'package:flutter/material.dart';
-import 'package:peerpicks/common/mysnackbar.dart';
-import 'package:peerpicks/features/auth/presentation/pages/sign_in_screen.dart';
-import 'package:peerpicks/features/auth/presentation/widgets/auth_widget.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:peerpicks/core/utils/snackbar_utils.dart';
+import '../../domain/entities/auth_entity.dart';
+import '../state/auth_state.dart';
+import '../view_model/auth_viewmodel.dart';
 
-class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
+class SignupPage extends ConsumerStatefulWidget {
+  const SignupPage({super.key});
 
   @override
-  State<SignUpScreen> createState() => _SignUpScreenState();
+  ConsumerState<SignupPage> createState() => _SignupPageState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen> {
+class _SignupPageState extends ConsumerState<SignupPage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-      TextEditingController();
 
-  bool _isPasswordVisible = false;
-  bool _isConfirmPasswordVisible = false;
+  // Controllers for all required PeerPicks fields
+  final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
     _nameController.dispose();
+    _usernameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  void _navigateToSignIn() {
-    // Navigate back to Sign In screen
-    Navigator.pop(context);
-  }
-
-  void _submitForm() {
+  void _handleSignup() {
     if (_formKey.currentState!.validate()) {
-      showMySnackBar(
-        context: context,
-        message: 'Account Registered Successfully! Please Sign In.',
-        color: peerPicksGreen,
+      // Mapping the controllers to the Domain Entity
+      final user = AuthEntity(
+        fullName: _nameController.text.trim(),
+        username: _usernameController.text.trim(),
+        email: _emailController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
+        password: _passwordController.text,
       );
 
-      // Navigate to the Sign In screen after successful registration
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const SignInScreen()),
-      );
-    } else {
-      showMySnackBar(
-        context: context,
-        message: 'Please fill out all fields correctly.',
-        color: Colors.red,
-      );
+      // Calling the StateNotifier
+      ref.read(authViewModelProvider.notifier).register(user);
     }
-  }
-
-  String? _validateName(String? value) {
-    if (value == null || value.isEmpty) return 'Name is required.';
-    return null;
-  }
-
-  String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) return 'Email is required.';
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(value))
-      return 'Please enter a valid email address.';
-    return null;
-  }
-
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) return 'Password is required.';
-    if (value.length < 6) return 'Password must be at least 6 characters.';
-    return null;
-  }
-
-  String? _validateConfirmPassword(String? value) {
-    if (value == null || value.isEmpty) return 'Confirm password is required.';
-    if (value != _passwordController.text) return 'Passwords do not match.';
-    return null;
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authViewModelProvider);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Listen to changes: If registered, show success and go back to login
+    ref.listen<AuthState>(authViewModelProvider, (previous, next) {
+      if (next.status == AuthStatus.registered) {
+        SnackbarUtils.showSuccess(
+          context,
+          'Account created successfully! Please login.',
+        );
+        Navigator.pop(context); // Go back to Login Page
+      } else if (next.status == AuthStatus.error && next.errorMessage != null) {
+        SnackbarUtils.showError(context, next.errorMessage!);
+      }
+    });
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDarkMode ? Colors.white : Colors.black,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 30),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      "Sign Up",
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: peerPicksGreen,
+                const Text(
+                  'Create Account',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Fill in the details to get started',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+                const SizedBox(height: 32),
+
+                // Full Name Field
+                _buildTextField(
+                  controller: _nameController,
+                  label: 'Full Name',
+                  hint: 'Enter your full name',
+                  icon: Icons.person_outline,
+                  validator: (val) => val!.isEmpty ? 'Enter your name' : null,
+                ),
+                const SizedBox(height: 16),
+
+                // Username Field
+                _buildTextField(
+                  controller: _usernameController,
+                  label: 'Username',
+                  hint: 'Choose a unique username',
+                  icon: Icons.alternate_email,
+                  validator: (val) => val!.isEmpty ? 'Enter a username' : null,
+                ),
+                const SizedBox(height: 16),
+
+                // Email Field
+                _buildTextField(
+                  controller: _emailController,
+                  label: 'Email',
+                  hint: 'Enter your email',
+                  icon: Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (val) {
+                    if (val!.isEmpty) return 'Enter an email';
+                    if (!val.contains('@')) return 'Enter a valid email';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Phone Field
+                _buildTextField(
+                  controller: _phoneController,
+                  label: 'Phone Number',
+                  hint: 'Enter your phone number',
+                  icon: Icons.phone_android_outlined,
+                  keyboardType: TextInputType.phone,
+                  validator: (val) =>
+                      val!.isEmpty ? 'Enter phone number' : null,
+                ),
+                const SizedBox(height: 16),
+
+                // Password Field
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                  ),
+                  validator: (val) =>
+                      val!.length < 6 ? 'Password must be 6+ characters' : null,
+                ),
+                const SizedBox(height: 32),
+
+                // Signup Button
+                SizedBox(
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: authState.status == AuthStatus.loading
+                        ? null
+                        : _handleSignup,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    Image.asset("assets/images/logos/logo.png", height: 80),
-                  ],
-                ),
-                const SizedBox(height: 50),
-
-                buildAuthTextFormField(
-                  controller: _nameController,
-                  validator: _validateName,
-                  labelText: "NAME",
-                  hintText: "Enter your full name",
-                  keyboardType: TextInputType.name,
-                  suffixIcon: const Icon(
-                    Icons.check,
-                    size: 20,
-                    color: peerPicksGreen,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                buildAuthTextFormField(
-                  controller: _emailController,
-                  validator: _validateEmail,
-                  labelText: "EMAIL",
-                  hintText: "Enter your email address",
-                  keyboardType: TextInputType.emailAddress,
-                  suffixIcon: const Icon(
-                    Icons.check,
-                    size: 20,
-                    color: peerPicksGreen,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                buildAuthTextFormField(
-                  controller: _passwordController,
-                  validator: _validatePassword,
-                  labelText: "PASSWORD",
-                  hintText: "Create a password (min 6 chars)",
-                  obscureText: !_isPasswordVisible,
-                  suffixIcon: buildVisibilityToggle(
-                    isVisible: _isPasswordVisible,
-                    toggleFunction: () => setState(
-                      () => _isPasswordVisible = !_isPasswordVisible,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                buildAuthTextFormField(
-                  controller: _confirmPasswordController,
-                  validator: _validateConfirmPassword,
-                  labelText: "CONFIRM PASSWORD",
-                  hintText: "Re-enter your password",
-                  obscureText: !_isConfirmPasswordVisible,
-                  suffixIcon: buildVisibilityToggle(
-                    isVisible: _isConfirmPasswordVisible,
-                    toggleFunction: () => setState(
-                      () => _isConfirmPasswordVisible =
-                          !_isConfirmPasswordVisible,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 40),
-
-                buildActionButton(
-                  text: "SIGN UP",
-                  onTap: _submitForm,
-                  color: Colors.black,
-                ),
-                const SizedBox(height: 18),
-
-                Center(
-                  child: GestureDetector(
-                    onTap: _navigateToSignIn,
-                    child: Text.rich(
-                      TextSpan(
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                        ),
-                        children: [
-                          const TextSpan(text: "Already have an account? "),
-                          TextSpan(
-                            text: "Sign in.",
+                    child: authState.status == AuthStatus.loading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            'Sign Up',
                             style: TextStyle(
-                              color: peerPicksGreen,
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
                   ),
                 ),
-                const SizedBox(height: 60),
-                buildSocialRow(),
-                const SizedBox(height: 30),
+                const SizedBox(height: 24),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  // Helper method to keep code clean
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    required String? Function(String?) validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon),
+      ),
+      validator: validator,
     );
   }
 }

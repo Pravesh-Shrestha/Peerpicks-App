@@ -1,25 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:peerpicks/common/mysnackbar.dart';
-import 'package:peerpicks/features/auth/presentation/pages/sign_up_screen.dart';
-import 'package:peerpicks/features/dashboard/presentation/pages/home_screen.dart';
-import 'package:peerpicks/features/auth/presentation/widgets/auth_widget.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:peerpicks/common/app_colors.dart';
+import '../../../../app/routes/app_routes.dart';
+import '../../../../core/utils/snackbar_utils.dart';
+import '../state/auth_state.dart';
+import '../view_model/auth_viewmodel.dart';
 
-class SignInScreen extends StatefulWidget {
-  const SignInScreen({super.key});
+class LoginPage extends ConsumerStatefulWidget {
+  const LoginPage({super.key});
 
   @override
-  State<SignInScreen> createState() => _SignInScreenState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _SignInScreenState extends State<SignInScreen> {
+class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-
-  // Note: The visibility logic from the original code was removed in a previous step,
-  // but the widget uses a visible icon. I will fix this in the widget definitions above
-  // but keep the state variable for completeness if you decide to re-implement it.
-  bool _isPasswordVisible = false;
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -28,157 +27,282 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
-  void _navigateToSignUp() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const SignUpScreen()),
-    );
-  }
-
-  void _submitForm() {
+  Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      showMySnackBar(
-        context: context,
-        message: 'Signing In...',
-        color: peerPicksGreen,
-      );
-
-      // Simulate network delay and successful login
-      Future.delayed(const Duration(seconds: 1), () {
-        // Navigate to the Home Screen and replace the current route
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      });
-    } else {
-      showMySnackBar(
-        context: context,
-        message: 'Invalid credentials or missing fields.',
-        color: Colors.red,
-      );
+      // Ensure these parameter names (email, password) match your AuthViewModel
+      await ref
+          .read(authViewModelProvider.notifier)
+          .login(_emailController.text.trim(), _passwordController.text);
     }
   }
 
-  String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) return 'Email is required.';
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(value))
-      return 'Please enter a valid email address.';
-    return null;
+  void _navigateToSignup() {
+    // Standard navigation to your signup page
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SignupPage()),
+    );
   }
 
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) return 'Password is required.';
-    if (value.length < 6) return 'Password must be at least 6 characters.';
-    return null;
+  void _handleForgotPassword() {
+    SnackbarUtils.showInfo(context, 'Forgot password feature coming soon');
+  }
+
+  void _handleGoogleSignIn() {
+    SnackbarUtils.showInfo(context, 'Google Sign In coming soon');
+  }
+
+  void _handleAppleSignIn() {
+    SnackbarUtils.showInfo(context, 'Apple Sign In coming soon');
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authViewModelProvider);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // PeerPicks Roboto Typography setup
+    final textColor = isDarkMode ? Colors.white : AppColors.darkText;
+    final secondaryTextColor = Colors.grey;
+
+    // Listen to auth state changes for navigation and error handling
+    ref.listen<AuthState>(authViewModelProvider, (previous, next) {
+      if (next.status == AuthStatus.authenticated) {
+        SnackbarUtils.showSuccess(context, "Login Successful!");
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const DashboardPage()),
+        );
+      } else if (next.status == AuthStatus.error && next.errorMessage != null) {
+        SnackbarUtils.showError(context, next.errorMessage!);
+      }
+    });
+
     return Scaffold(
-      backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.all(24.0),
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 30),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      "Sign In",
+                const SizedBox(height: 40),
+
+                //PeerPicks Logo
+                Center(
+                  child: SvgPicture.asset(
+                    'assets/images/logos/logo.svg',
+                    width: 200,
+                    height: 70,
+                    colorFilter: ColorFilter.mode(
+                      isDarkMode ? Colors.white : AppColors.primaryGreen,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // Title Section
+                Text(
+                  'Welcome Back!',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                    fontFamily: 'Roboto',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Sign in to continue',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: secondaryTextColor,
+                    fontFamily: 'Roboto',
+                  ),
+                ),
+                const SizedBox(height: 40),
+
+                // Email Field
+                TextFormField(
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  style: TextStyle(color: textColor, fontFamily: 'Roboto'),
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    hintText: 'Enter your email',
+                    prefixIcon: Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty)
+                      return 'Please enter your email';
+                    if (!value.contains('@'))
+                      return 'Please enter a valid email';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Password Field
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  style: TextStyle(color: textColor, fontFamily: 'Roboto'),
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    hintText: 'Enter your password',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty)
+                      return 'Please enter your password';
+                    if (value.length < 6)
+                      return 'Minimum 6 characters required';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 8),
+
+                // Forgot Password
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _handleForgotPassword,
+                    child: const Text(
+                      'Forgot Password?',
                       style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: peerPicksGreen,
+                        color: AppColors.primaryGreen,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Image.asset("assets/images/logos/logo.png", height: 80),
-                  ],
-                ),
-                const SizedBox(height: 50),
-
-                buildAuthTextFormField(
-                  controller: _emailController,
-                  validator: _validateEmail,
-                  labelText: "EMAIL",
-                  hintText: "Enter your email address",
-                  keyboardType: TextInputType.emailAddress,
-                  suffixIcon: const Icon(
-                    Icons.check,
-                    size: 20,
-                    color: peerPicksGreen,
                   ),
                 ),
                 const SizedBox(height: 24),
 
-                buildAuthTextFormField(
-                  controller: _passwordController,
-                  validator: _validatePassword,
-                  labelText: "PASSWORD",
-                  hintText: "Enter your password",
-                  obscureText: !_isPasswordVisible,
-                  suffixIcon: buildVisibilityToggle(
-                    isVisible: _isPasswordVisible,
-                    toggleFunction: () => setState(
-                      () => _isPasswordVisible = !_isPasswordVisible,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    "Forgot password?",
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-
-                buildActionButton(
-                  text: "SIGN IN",
-                  onTap: _submitForm,
-                  color: Colors.black,
-                ),
-                const SizedBox(height: 18),
-
-                Center(
-                  child: GestureDetector(
-                    onTap: _navigateToSignUp,
-                    child: const Text.rich(
-                      TextSpan(
-                        style: TextStyle(fontSize: 14, color: Colors.grey),
-                        children: [
-                          TextSpan(text: "Don’t have an account? "),
-                          TextSpan(
-                            text: "Sign up.",
-                            style: TextStyle(
-                              color: peerPicksGreen,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                // Login Button
+                SizedBox(
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: authState.status == AuthStatus.loading
+                        ? null
+                        : _handleLogin,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreen,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+                    child: authState.status == AuthStatus.loading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            'Login',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
+                const SizedBox(height: 24),
 
-                const SizedBox(height: 60),
-                buildSocialRow(),
-                const SizedBox(height: 30),
+                // Social Login Section
+                _buildSocialDivider(secondaryTextColor),
+                const SizedBox(height: 24),
+                _buildSocialButtons(isDarkMode),
+                const SizedBox(height: 24),
+
+                // Sign Up Link
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Don't have an account? ",
+                      style: TextStyle(color: secondaryTextColor),
+                    ),
+                    TextButton(
+                      onPressed: _navigateToSignup,
+                      child: const Text(
+                        'Sign Up',
+                        style: TextStyle(
+                          color: AppColors.primaryGreen,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSocialDivider(Color color) {
+    return Row(
+      children: [
+        const Expanded(child: Divider()),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'OR',
+            style: TextStyle(color: color, fontWeight: FontWeight.w500),
+          ),
+        ),
+        const Expanded(child: Divider()),
+      ],
+    );
+  }
+
+  Widget _buildSocialButtons(bool isDarkMode) {
+    return Row(
+      children: [
+        _socialButton(
+          'assets/icons/google_logo.svg',
+          'Google',
+          _handleGoogleSignIn,
+          isDarkMode,
+        ),
+        const SizedBox(width: 16),
+        _socialButton(
+          'assets/icons/apple_logo.svg',
+          'Apple',
+          _handleAppleSignIn,
+          isDarkMode,
+        ),
+      ],
+    );
+  }
+
+  Widget _socialButton(
+    String asset,
+    String label,
+    VoidCallback onPressed,
+    bool isDarkMode,
+  ) {
+    return Expanded(
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: SvgPicture.asset(asset, width: 20, height: 20),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),

@@ -4,7 +4,7 @@ class AuthEntity extends Equatable {
   final String? authId;
   final String fullName;
   final String email;
-  final String phoneNumber;
+  final String? phoneNumber;
   final String username;
   final String? password;
 

@@ -1,13 +1,12 @@
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/auth_entity.dart';
 
-/// Defines the various states of the authentication process
 enum AuthStatus {
   initial,
   loading,
   authenticated,
   unauthenticated,
-  registered, // Used to trigger navigation after sign-up
+  registered,
   error,
 }
 
@@ -22,7 +21,7 @@ class AuthState extends Equatable {
     this.errorMessage,
   });
 
-  /// Factory constructor for the starting state of the app
+  // Initial state helper
   factory AuthState.initial() {
     return const AuthState(
       status: AuthStatus.initial,
@@ -31,8 +30,7 @@ class AuthState extends Equatable {
     );
   }
 
-  /// Creates a copy of the current state with updated values.
-  /// This is essential for Riverpod to detect changes.
+  // CopyWith helper to modify state immutably
   AuthState copyWith({
     AuthStatus? status,
     AuthEntity? user,

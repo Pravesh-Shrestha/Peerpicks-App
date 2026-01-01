@@ -8,12 +8,12 @@ class MyButton extends StatelessWidget {
   final Color textColor;
 
   const MyButton({
-    Key? key,
+    super.key,
     required this.text,
     required this.onPressed,
     this.backgroundColor = const Color.fromARGB(255, 121, 172, 59),
     this.textColor = AppColors.white,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
