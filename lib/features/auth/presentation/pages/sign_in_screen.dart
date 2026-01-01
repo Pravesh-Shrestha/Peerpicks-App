@@ -1,65 +1,63 @@
 import 'package:flutter/material.dart';
 import 'package:peerpicks/common/mysnackbar.dart';
-import 'package:peerpicks/screens/auth/sign_in_screen.dart';
-import 'package:peerpicks/widgets/auth_widget.dart';
+import 'package:peerpicks/features/auth/presentation/pages/sign_up_screen.dart';
+import 'package:peerpicks/features/dashboard/presentation/pages/home_screen.dart';
+import 'package:peerpicks/features/auth/presentation/widgets/auth_widget.dart';
 
-class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
+class SignInScreen extends StatefulWidget {
+  const SignInScreen({super.key});
 
   @override
-  State<SignUpScreen> createState() => _SignUpScreenState();
+  State<SignInScreen> createState() => _SignInScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen> {
+class _SignInScreenState extends State<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-      TextEditingController();
 
+  // Note: The visibility logic from the original code was removed in a previous step,
+  // but the widget uses a visible icon. I will fix this in the widget definitions above
+  // but keep the state variable for completeness if you decide to re-implement it.
   bool _isPasswordVisible = false;
-  bool _isConfirmPasswordVisible = false;
 
   @override
   void dispose() {
-    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  void _navigateToSignIn() {
-    // Navigate back to Sign In screen
-    Navigator.pop(context);
+  void _navigateToSignUp() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SignUpScreen()),
+    );
   }
 
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
       showMySnackBar(
         context: context,
-        message: 'Account Registered Successfully! Please Sign In.',
+        message: 'Signing In...',
         color: peerPicksGreen,
       );
 
-      // Navigate to the Sign In screen after successful registration
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const SignInScreen()),
-      );
+      // Simulate network delay and successful login
+      Future.delayed(const Duration(seconds: 1), () {
+        // Navigate to the Home Screen and replace the current route
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      });
     } else {
       showMySnackBar(
         context: context,
-        message: 'Please fill out all fields correctly.',
+        message: 'Invalid credentials or missing fields.',
         color: Colors.red,
       );
     }
-  }
-
-  String? _validateName(String? value) {
-    if (value == null || value.isEmpty) return 'Name is required.';
-    return null;
   }
 
   String? _validateEmail(String? value) {
@@ -73,12 +71,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) return 'Password is required.';
     if (value.length < 6) return 'Password must be at least 6 characters.';
-    return null;
-  }
-
-  String? _validateConfirmPassword(String? value) {
-    if (value == null || value.isEmpty) return 'Confirm password is required.';
-    if (value != _passwordController.text) return 'Passwords do not match.';
     return null;
   }
 
@@ -99,7 +91,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      "Sign Up",
+                      "Sign In",
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -110,20 +102,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ],
                 ),
                 const SizedBox(height: 50),
-
-                buildAuthTextFormField(
-                  controller: _nameController,
-                  validator: _validateName,
-                  labelText: "NAME",
-                  hintText: "Enter your full name",
-                  keyboardType: TextInputType.name,
-                  suffixIcon: const Icon(
-                    Icons.check,
-                    size: 20,
-                    color: peerPicksGreen,
-                  ),
-                ),
-                const SizedBox(height: 16),
 
                 buildAuthTextFormField(
                   controller: _emailController,
@@ -137,13 +115,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     color: peerPicksGreen,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
                 buildAuthTextFormField(
                   controller: _passwordController,
                   validator: _validatePassword,
                   labelText: "PASSWORD",
-                  hintText: "Create a password (min 6 chars)",
+                  hintText: "Enter your password",
                   obscureText: !_isPasswordVisible,
                   suffixIcon: buildVisibilityToggle(
                     isVisible: _isPasswordVisible,
@@ -152,26 +130,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
-                buildAuthTextFormField(
-                  controller: _confirmPasswordController,
-                  validator: _validateConfirmPassword,
-                  labelText: "CONFIRM PASSWORD",
-                  hintText: "Re-enter your password",
-                  obscureText: !_isConfirmPasswordVisible,
-                  suffixIcon: buildVisibilityToggle(
-                    isVisible: _isConfirmPasswordVisible,
-                    toggleFunction: () => setState(
-                      () => _isConfirmPasswordVisible =
-                          !_isConfirmPasswordVisible,
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    "Forgot password?",
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 40),
 
                 buildActionButton(
-                  text: "SIGN UP",
+                  text: "SIGN IN",
                   onTap: _submitForm,
                   color: Colors.black,
                 ),
@@ -179,17 +155,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                 Center(
                   child: GestureDetector(
-                    onTap: _navigateToSignIn,
-                    child: Text.rich(
+                    onTap: _navigateToSignUp,
+                    child: const Text.rich(
                       TextSpan(
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey),
                         children: [
-                          const TextSpan(text: "Already have an account? "),
+                          TextSpan(text: "Don’t have an account? "),
                           TextSpan(
-                            text: "Sign in.",
+                            text: "Sign up.",
                             style: TextStyle(
                               color: peerPicksGreen,
                               fontWeight: FontWeight.bold,
@@ -200,6 +173,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 60),
                 buildSocialRow(),
                 const SizedBox(height: 30),

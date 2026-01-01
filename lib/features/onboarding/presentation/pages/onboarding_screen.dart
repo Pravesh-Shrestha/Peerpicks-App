@@ -4,7 +4,7 @@ import 'package:peerpicks/common/mysnackbar.dart';
 import 'package:peerpicks/features/onboarding/data/models/onboarding_model.dart';
 import 'package:peerpicks/features/onboarding/presentation/widgets/onboarding_footer.dart';
 import 'package:peerpicks/features/onboarding/presentation/widgets/onboarding_page_content.dart';
-import 'package:peerpicks/screens/auth/sign_in_screen.dart';
+import 'package:peerpicks/features/auth/presentation/pages/sign_in_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
