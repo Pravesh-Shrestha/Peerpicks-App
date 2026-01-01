@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:peerpicks/screens/onboarding/splash_screen.dart';
+import 'package:peerpicks/features/splash/presentation/pages/splash_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:peerpicks/screens/onboarding/onboarding_screen.dart'; // Required for Timer
+
+import 'package:peerpicks/features/onboarding/presentation/pages/onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

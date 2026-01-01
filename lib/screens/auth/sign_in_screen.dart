@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:peerpicks/common/mysnackbar.dart';
 import 'package:peerpicks/screens/auth/sign_up_screen.dart';
-import 'package:peerpicks/screens/home/home_screen.dart';
+import 'package:peerpicks/features/dashboard/presentation/pages/home_screen.dart';
 import 'package:peerpicks/widgets/auth_widget.dart';
 
 class SignInScreen extends StatefulWidget {

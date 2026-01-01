@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:peerpicks/screens/home/home_screen/add_review_screen.dart';
-import 'package:peerpicks/screens/home/home_screen/dashboard_screen.dart';
-import 'package:peerpicks/screens/home/home_screen/favorites_screen.dart';
-import 'package:peerpicks/screens/home/home_screen/notification_screen.dart';
-import 'package:peerpicks/screens/home/home_screen/profile_screen.dart';
+import 'package:peerpicks/features/dashboard/presentation/pages/dashboard_screen.dart';
+import 'package:peerpicks/features/dashboard/presentation/pages/favorites_screen.dart';
+import 'package:peerpicks/features/dashboard/presentation/pages/notification_screen.dart';
+import 'package:peerpicks/features/dashboard/presentation/pages/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,7 +31,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     const Color activeColor = Colors.lightGreen;
     const Color inactiveColor = Colors.white;
-    const Color fabColor = Colors.lightGreen;
 
     return Scaffold(
       body: lstBottomScreen[_selectedIndex],
