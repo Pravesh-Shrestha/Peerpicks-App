@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:peerpicks/common/app_colors.dart';
 import 'package:peerpicks/common/mysnackbar.dart';
+import 'package:peerpicks/features/onboarding/data/models/onboarding_model.dart';
 import 'package:peerpicks/features/onboarding/presentation/widgets/onboarding_footer.dart';
 import 'package:peerpicks/features/onboarding/presentation/widgets/onboarding_page_content.dart';
-import 'package:peerpicks/model/onboarding_model.dart';
 import 'package:peerpicks/screens/auth/sign_in_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {

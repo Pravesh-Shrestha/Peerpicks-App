@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:peerpicks/common/app_colors.dart';
-import 'package:peerpicks/model/onboarding_model.dart';
+import 'package:peerpicks/features/onboarding/data/models/onboarding_model.dart';
+
 import 'package:peerpicks/widgets/my_button.dart';
 
 class OnboardingFooter extends StatelessWidget {
