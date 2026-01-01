@@ -8,14 +8,14 @@ import '../../domain/repositories/auth_repository.dart';
 
 // Create provider
 final authRepositoryProvider = Provider<IAuthRepository>((ref) {
-  final authDatasource = ref.read(authLocalDatasourceProvider);
+  final authDatasource = ref.read(authLocalDataSourceProvider);
   return AuthRepository(authDatasource: authDatasource);
 });
 
 class AuthRepository implements IAuthRepository {
-  final AuthLocalDatasource _authDataSource;
+  final AuthLocalDataSource _authDataSource;
 
-  AuthRepository({required AuthLocalDatasource authDatasource})
+  AuthRepository({required AuthLocalDataSource authDatasource})
     : _authDataSource = authDatasource;
 
   @override
@@ -86,14 +86,17 @@ class AuthRepository implements IAuthRepository {
   }
 
   @override
-  Future<Either<Failure, AuthEntity>> getUserByEmail(String email) {
-    // TODO: implement getUserByEmail
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<Either<Failure, AuthEntity>> getUserById(String authId) {
-    // TODO: implement getUserById
-    throw UnimplementedError();
+  Future<Either<Failure, AuthEntity>> getUserByEmail(String email) async {
+    try {
+      final model = await _authDataSource.getUserByEmail(email);
+      if (model != null) {
+        return Right(model.toEntity());
+      }
+      return const Left(
+        LocalDatabaseFailure(message: "No user found with this email"),
+      );
+    } catch (e) {
+      return Left(LocalDatabaseFailure(message: e.toString()));
+    }
   }
 }

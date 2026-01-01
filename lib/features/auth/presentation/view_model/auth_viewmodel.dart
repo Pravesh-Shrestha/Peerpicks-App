@@ -1,45 +1,47 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/usecases/get_current_user_usecase.dart';
-import '../../domain/usecases/login_usecase.dart';
-import '../../domain/usecases/logout_usecase.dart';
-import '../../domain/usecases/register_usecase.dart';
-import '../state/auth_state.dart';
+import 'package:peerpicks/features/auth/domain/entities/auth_entity.dart';
+import 'package:peerpicks/features/auth/domain/usecases/get_current_user_usecase.dart';
+import 'package:peerpicks/features/auth/domain/usecases/login_usecase.dart';
+import 'package:peerpicks/features/auth/domain/usecases/logout_usecase.dart';
+import 'package:peerpicks/features/auth/domain/usecases/register_usecase.dart';
+import 'package:peerpicks/features/auth/presentation/state/auth_state.dart';
 
+// Provider definition using the NotifierProvider
 final authViewModelProvider = NotifierProvider<AuthViewModel, AuthState>(
   AuthViewModel.new,
 );
 
 class AuthViewModel extends Notifier<AuthState> {
-  late final RegisterUseCase _registerUsecase;
-  late final LoginUseCase _loginUsecase;
-  late final GetCurrentUserUsecase _getCurrentUserUsecase;
-  late final LogoutUseCase _logoutUsecase;
+  late final RegisterUseCase _registerUseCase;
+  late final LoginUseCase _loginUseCase;
+  late final GetCurrentUserUseCase _getCurrentUserUseCase;
+  late final LogoutUsCase _logoutUseCase;
 
   @override
   AuthState build() {
-    _registerUsecase = ref.read(registerUsecaseProvider);
-    _loginUsecase = ref.read(loginUseCaseProvider);
-    _getCurrentUserUsecase = ref.read(getCurrentUserUsecaseProvider);
-    _logoutUsecase = ref.read(logoutUseCaseProvider);
-    return AuthState.initial();
+    // Initializing use cases from their respective providers
+    _registerUseCase = ref.read(registerUsecaseProvider);
+    _loginUseCase = ref.read(loginUseCaseProvider);
+    _getCurrentUserUseCase = ref.read(getCurrentUserUseCaseProvider);
+    _logoutUseCase = ref.read(logoutUseCaseProvider);
+
+    // Check for existing session on build
+    Future.microtask(() => getCurrentUser());
+
+    return const AuthState();
   }
 
-  Future<void> register({
-    required String fullName,
-    required String email,
-    required String username,
-    required String password,
-    String? phoneNumber,
-  }) async {
+  /// Handles user registration
+  Future<void> register(AuthEntity user) async {
     state = state.copyWith(status: AuthStatus.loading);
 
-    final result = await _registerUsecase(
+    final result = await _registerUseCase(
       RegisterParams(
-        fullName: fullName,
-        email: email,
-        username: username,
-        password: password,
-        phoneNumber: phoneNumber,
+        fullName: user.fullName,
+        email: user.email,
+        username: user.username,
+        password: user.password!,
+        phoneNumber: user.phoneNumber,
       ),
     );
 
@@ -52,10 +54,11 @@ class AuthViewModel extends Notifier<AuthState> {
     );
   }
 
+  /// Handles user login
   Future<void> login({required String email, required String password}) async {
     state = state.copyWith(status: AuthStatus.loading);
 
-    final result = await _loginUsecase(
+    final result = await _loginUseCase(
       LoginParams(email: email, password: password),
     );
 
@@ -69,9 +72,11 @@ class AuthViewModel extends Notifier<AuthState> {
     );
   }
 
+  /// Checks if a session exists (e.g., on app startup)
   Future<void> getCurrentUser() async {
     state = state.copyWith(status: AuthStatus.loading);
-    final result = await _getCurrentUserUsecase();
+
+    final result = await _getCurrentUserUseCase();
 
     result.fold(
       (failure) => state = state.copyWith(
@@ -83,9 +88,11 @@ class AuthViewModel extends Notifier<AuthState> {
     );
   }
 
+  /// Handles user logout and clears the local session
   Future<void> logout() async {
     state = state.copyWith(status: AuthStatus.loading);
-    final result = await _logoutUsecase();
+
+    final result = await _logoutUseCase();
 
     result.fold(
       (failure) => state = state.copyWith(
@@ -99,6 +106,7 @@ class AuthViewModel extends Notifier<AuthState> {
     );
   }
 
+  /// Resets error messages in the state
   void clearError() {
     state = state.copyWith(errorMessage: null);
   }

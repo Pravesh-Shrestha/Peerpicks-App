@@ -6,15 +6,15 @@ import 'package:peerpicks/features/auth/data/repositories/auth_repository.dart';
 import 'package:peerpicks/features/auth/domain/entities/auth_entity.dart';
 import 'package:peerpicks/features/auth/domain/repositories/auth_repository.dart';
 
-final getCurrentUserUsecaseProvider = Provider<GetCurrentUserUsecase>((ref) {
+final getCurrentUserUseCaseProvider = Provider<GetCurrentUserUseCase>((ref) {
   final authRepository = ref.read(authRepositoryProvider);
-  return GetCurrentUserUsecase(authRepository: authRepository);
+  return GetCurrentUserUseCase(authRepository: authRepository);
 });
 
-class GetCurrentUserUsecase implements UsecaseWithoutParms<AuthEntity> {
+class GetCurrentUserUseCase implements UsecaseWithoutParms<AuthEntity> {
   final IAuthRepository _authRepository;
 
-  GetCurrentUserUsecase({required IAuthRepository authRepository})
+  GetCurrentUserUseCase({required IAuthRepository authRepository})
     : _authRepository = authRepository;
 
   @override

@@ -1,19 +1,24 @@
 import 'package:dartz/dartz.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:peerpicks/core/usecases/app_usecases.dart';
 import 'package:peerpicks/features/auth/data/repositories/auth_repository.dart';
 import '../../../../core/error/failures.dart';
 import '../repositories/auth_repository.dart';
 
-final logoutUseCaseProvider = Provider<LogoutUseCase>((ref) {
-  return LogoutUseCase(repository: ref.read(authRepositoryProvider));
+// Create Provider
+final logoutUseCaseProvider = Provider<LogoutUsCase>((ref) {
+  final authRepository = ref.read(authRepositoryProvider);
+  return LogoutUsCase(authRepository: authRepository);
 });
 
-class LogoutUseCase {
-  final IAuthRepository repository;
+class LogoutUsCase implements UsecaseWithoutParms<bool> {
+  final IAuthRepository _authRepository;
 
-  LogoutUseCase({required this.repository});
+  LogoutUsCase({required IAuthRepository authRepository})
+    : _authRepository = authRepository;
 
-  Future<Either<Failure, bool>> execute() async {
-    return await repository.logout();
+  @override
+  Future<Either<Failure, bool>> call() {
+    return _authRepository.logout();
   }
 }

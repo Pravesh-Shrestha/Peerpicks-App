@@ -25,6 +25,9 @@ class AuthHiveModel extends HiveObject {
   @HiveField(5)
   final String? password;
 
+  @HiveField(6)
+  final String? profilePicture;
+
   AuthHiveModel({
     String? authId,
     required this.fullName,
@@ -32,6 +35,7 @@ class AuthHiveModel extends HiveObject {
     this.phoneNumber,
     required this.username,
     this.password,
+    this.profilePicture,
   }) : authId = authId ?? const Uuid().v4();
 
   // Convert Hive Model to Domain Entity
@@ -43,6 +47,7 @@ class AuthHiveModel extends HiveObject {
       phoneNumber: phoneNumber?.toString() ?? '',
       username: username,
       password: password,
+      profilePicture: profilePicture,
     );
   }
 
@@ -55,6 +60,7 @@ class AuthHiveModel extends HiveObject {
       phoneNumber: entity.phoneNumber,
       username: entity.username,
       password: entity.password,
+      profilePicture: entity.profilePicture,
     );
   }
 }

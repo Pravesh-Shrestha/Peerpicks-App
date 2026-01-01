@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:peerpicks/common/app_colors.dart';
 import 'package:peerpicks/core/utils/snackbar_utils.dart';
 import '../../domain/entities/auth_entity.dart';
 import '../state/auth_state.dart';
@@ -19,8 +19,8 @@ class _SignupPageState extends ConsumerState<SignupPage> {
   // Controllers for all required PeerPicks fields
   final _nameController = TextEditingController();
   final _usernameController = TextEditingController();
-  final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
@@ -29,15 +29,14 @@ class _SignupPageState extends ConsumerState<SignupPage> {
   void dispose() {
     _nameController.dispose();
     _usernameController.dispose();
-    _emailController.dispose();
     _phoneController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   void _handleSignup() {
     if (_formKey.currentState!.validate()) {
-      // Mapping the controllers to the Domain Entity
       final user = AuthEntity(
         fullName: _nameController.text.trim(),
         username: _usernameController.text.trim(),
@@ -45,7 +44,6 @@ class _SignupPageState extends ConsumerState<SignupPage> {
         phoneNumber: _phoneController.text.trim(),
         password: _passwordController.text,
       );
-
       // Calling the StateNotifier
       ref.read(authViewModelProvider.notifier).register(user);
     }
@@ -120,6 +118,18 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                 ),
                 const SizedBox(height: 16),
 
+                // Phone Field
+                _buildTextField(
+                  controller: _phoneController,
+                  label: 'Phone Number',
+                  hint: 'Enter your phone number',
+                  icon: Icons.phone_android_outlined,
+                  keyboardType: TextInputType.phone,
+                  validator: (val) =>
+                      val!.isEmpty ? 'Enter phone number' : null,
+                ),
+                const SizedBox(height: 16),
+
                 // Email Field
                 _buildTextField(
                   controller: _emailController,
@@ -135,18 +145,6 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Phone Field
-                _buildTextField(
-                  controller: _phoneController,
-                  label: 'Phone Number',
-                  hint: 'Enter your phone number',
-                  icon: Icons.phone_android_outlined,
-                  keyboardType: TextInputType.phone,
-                  validator: (val) =>
-                      val!.isEmpty ? 'Enter phone number' : null,
-                ),
-                const SizedBox(height: 16),
-
                 // Password Field
                 TextFormField(
                   controller: _passwordController,
@@ -154,6 +152,9 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                   decoration: InputDecoration(
                     labelText: 'Password',
                     prefixIcon: const Icon(Icons.lock_outline),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
@@ -167,7 +168,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                   validator: (val) =>
                       val!.length < 6 ? 'Password must be 6+ characters' : null,
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 40),
 
                 // Signup Button
                 SizedBox(
@@ -177,7 +178,9 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                         ? null
                         : _handleSignup,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: AppColors.primaryGreen,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -189,10 +192,28 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
                             ),
                           ),
                   ),
+                ),
+                const SizedBox(height: 24),
+
+                // Navigation to Login
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text("Already have an account? "),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: const Text(
+                        "Login",
+                        style: TextStyle(
+                          color: AppColors.primaryGreen,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
               ],
@@ -219,6 +240,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
         labelText: label,
         hintText: hint,
         prefixIcon: Icon(icon),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
       validator: validator,
     );

@@ -1,71 +1,85 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive_flutter/hive_flutter.dart'; // Use hive_flutter
 import 'package:path_provider/path_provider.dart';
-import '../../../features/auth/data/models/auth_hive_model.dart';
+import 'package:peerpicks/core/constants/hive_table_constant.dart';
+import 'package:peerpicks/features/auth/data/models/auth_hive_model.dart';
 
-// Provider to access HiveService throughout the app
-final hiveServiceProvider = Provider<HiveService>((ref) => HiveService());
+final hiveServiceProvider = Provider<HiveService>((ref) {
+  return HiveService();
+});
 
 class HiveService {
-  static const String _userBoxName = 'userBox';
-  static const String _sessionBoxName = 'sessionBox';
-
-  // 1. Initialize Hive and Register Adapters
+  // init
   Future<void> init() async {
-    // Get the directory for storing the database
-    var directory = await getApplicationDocumentsDirectory();
-    Hive.init(directory.path);
+    final directory = await getApplicationDocumentsDirectory();
+    final path = '${directory.path}/${HiveTableConstant.dbName}';
+    Hive.init(path);
 
-    // Register the AuthHiveModelAdapter (Generated from auth_hive_model.dart)
-    // typeId must match the one used in @HiveType(typeId: 0)
-    if (!Hive.isAdapterRegistered(0)) {
+    // register adapter
+    _registerAdapter();
+    await _openBoxes();
+  }
+
+  void _registerAdapter() {
+    if (!Hive.isAdapterRegistered(HiveTableConstant.authTypeId)) {
       Hive.registerAdapter(AuthHiveModelAdapter());
     }
   }
 
-  // 2. Register User (Save to userBox)
+  // box open
+  Future<void> _openBoxes() async {
+    await Hive.openBox<AuthHiveModel>(HiveTableConstant.authTable);
+  }
+
+  // box close
+  Future<void> _close() async {
+    await Hive.close();
+  }
+
+  Box<AuthHiveModel> get _authBox =>
+      Hive.box<AuthHiveModel>(HiveTableConstant.authTable);
+
+  // ======================= Auth Queries =========================
+
   Future<void> register(AuthHiveModel user) async {
-    var box = await Hive.openBox<AuthHiveModel>(_userBoxName);
-    await box.put(user.email, user); // Using email as the unique key
+    await _authBox.put(user.authId, user);
   }
 
-  // 3. Login User & Create Session
-  Future<AuthHiveModel?> login(String email, String password) async {
-    var box = await Hive.openBox<AuthHiveModel>(_userBoxName);
-
-    // Find user by email key
-    var user = box.get(email);
-
-    if (user != null && user.password == password) {
-      // Save user to session box to persist login state
-      var sessionBox = await Hive.openBox<AuthHiveModel>(_sessionBoxName);
-      await sessionBox.put('current_user', user);
-      return user;
+  AuthHiveModel? login(String email, String password) {
+    try {
+      return _authBox.values.firstWhere(
+        (user) => user.email == email && user.password == password,
+      );
+    } catch (e) {
+      return null;
     }
-    return null; // Return null if credentials don't match
   }
 
-  // 4. Check if Email Exists (Validation)
+  AuthHiveModel? getUserById(String authId) {
+    return _authBox.get(authId);
+  }
+
+  bool isEmailRegistered(String email) {
+    return _authBox.values.any((user) => user.email == email);
+  }
+
   Future<AuthHiveModel?> getUserByEmail(String email) async {
-    var box = await Hive.openBox<AuthHiveModel>(_userBoxName);
-    return box.get(email);
+    try {
+      return _authBox.values.firstWhere((user) => user.email == email);
+    } catch (e) {
+      return null;
+    }
   }
 
-  // 5. Get Current Logged In User
-  Future<AuthHiveModel?> getCurrentUser() async {
-    var sessionBox = await Hive.openBox<AuthHiveModel>(_sessionBoxName);
-    return sessionBox.get('current_user');
+  Future<bool> updateUser(AuthHiveModel user) async {
+    if (_authBox.containsKey(user.authId)) {
+      await _authBox.put(user.authId, user);
+      return true;
+    }
+    return false;
   }
 
-  // 6. Logout (Clear Session)
-  Future<void> logout() async {
-    var sessionBox = await Hive.openBox<AuthHiveModel>(_sessionBoxName);
-    await sessionBox.clear();
-  }
-
-  // 7. Clear All Data (For Testing)
-  Future<void> deleteHive() async {
-    await Hive.deleteBoxFromDisk(_userBoxName);
-    await Hive.deleteBoxFromDisk(_sessionBoxName);
+  Future<void> deleteUser(String authId) async {
+    await _authBox.delete(authId);
   }
 }

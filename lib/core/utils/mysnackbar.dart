@@ -5,6 +5,7 @@ showMySnackBar({
   required BuildContext context,
   required String message,
   bool isError = false,
+  required Color color,
 }) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(

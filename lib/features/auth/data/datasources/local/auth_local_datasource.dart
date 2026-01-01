@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peerpicks/core/services/hive/hive_service.dart';
+import 'package:peerpicks/core/services/storage/user_session_service.dart';
 import 'package:peerpicks/features/auth/data/datasources/remote/auth_datasource.dart';
 import 'package:peerpicks/features/auth/data/models/auth_hive_model.dart';
 
@@ -24,27 +25,68 @@ class AuthLocalDataSource implements IAuthDataSource {
        _userSessionService = userSessionService;
 
   @override
-  Future<void> register(AuthHiveModel user) async {
+  Future<bool> deleteUser(String authId) async {
     try {
-      await _hiveService.register(user);
+      await _hiveService.deleteUser(authId);
+      return true;
     } catch (e) {
-      throw Exception("Registration failed: $e");
+      return false;
+    }
+  }
+
+  @override
+  Future<AuthHiveModel?> getCurrentUser() async {
+    try {
+      // 1. Check if user is logged in via session service
+      if (!_userSessionService.isLoggedIn()) {
+        return null;
+      }
+
+      // 2. Get user ID from the active session
+      final userId = _userSessionService.getCurrentUserId();
+      if (userId == null) {
+        return null;
+      }
+
+      // 3. Fetch the full user model from Hive database
+      return _hiveService.getUserById(userId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  @override
+  Future<AuthHiveModel?> getUserByEmail(String email) async {
+    try {
+      return _hiveService.getUserByEmail(email);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  @override
+  Future<AuthHiveModel?> getUserById(String authId) async {
+    try {
+      return _hiveService.getUserById(authId);
+    } catch (e) {
+      return null;
     }
   }
 
   @override
   Future<AuthHiveModel?> login(String email, String password) async {
     try {
-      final user = await _hiveService.login(email, password);
+      final user = _hiveService.login(email, password);
+
       if (user != null && user.authId != null) {
-        // Save session so user stays logged in after app restart
+        // Save user session to SharedPreferences for persistent login
         await _userSessionService.saveUserSession(
           userId: user.authId!,
           email: user.email,
           fullName: user.fullName,
           username: user.username,
           phoneNumber: user.phoneNumber,
-          // Removed batchId
+          profilePicture: user.profilePicture,
         );
       }
       return user;
@@ -54,30 +96,9 @@ class AuthLocalDataSource implements IAuthDataSource {
   }
 
   @override
-  Future<AuthHiveModel?> getCurrentUser() async {
-    try {
-      // 1. Check if a session exists in SharedPreferences
-      if (!_userSessionService.isLoggedIn()) {
-        return null;
-      }
-
-      // 2. Get user ID from session
-      final userId = _userSessionService.getCurrentUserId();
-      if (userId == null) {
-        return null;
-      }
-
-      // 3. Fetch full user details from Hive
-      return await _hiveService.getUserById(userId);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  @override
   Future<bool> logout() async {
     try {
-      // Clear SharedPreferences session
+      // Clear the session from SharedPreferences
       await _userSessionService.clearSession();
       return true;
     } catch (e) {
@@ -86,20 +107,11 @@ class AuthLocalDataSource implements IAuthDataSource {
   }
 
   @override
-  Future<AuthHiveModel?> getUserById(String authId) async {
+  Future<void> register(AuthHiveModel user) async {
     try {
-      return await _hiveService.getUserById(authId);
+      await _hiveService.register(user);
     } catch (e) {
-      return null;
-    }
-  }
-
-  @override
-  Future<AuthHiveModel?> getUserByEmail(String email) async {
-    try {
-      return await _hiveService.getUserByEmail(email);
-    } catch (e) {
-      return null;
+      throw Exception("Registration failed: $e");
     }
   }
 
@@ -107,16 +119,6 @@ class AuthLocalDataSource implements IAuthDataSource {
   Future<bool> updateUser(AuthHiveModel user) async {
     try {
       return await _hiveService.updateUser(user);
-    } catch (e) {
-      return false;
-    }
-  }
-
-  @override
-  Future<bool> deleteUser(String authId) async {
-    try {
-      await _hiveService.deleteUser(authId);
-      return true;
     } catch (e) {
       return false;
     }
