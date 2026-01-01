@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:peerpicks/core/services/hive/hive_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:peerpicks/app/app.dart';
 import 'package:peerpicks/core/services/storage/user_session_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Hive.initFlutter();
 
   // 4. Set System UI Styles
   SystemChrome.setSystemUIOverlayStyle(
@@ -19,7 +18,9 @@ void main() async {
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
-
+  // Initialize Hive Service
+  final hiveService = HiveService();
+  await hiveService.init();
   // 5. Initialize SharedPreferences instance
   final sharedPreferences = await SharedPreferences.getInstance();
 
