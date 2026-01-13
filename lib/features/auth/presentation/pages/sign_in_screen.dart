@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:peerpicks/app/routes/app_routes.dart';
 import 'package:peerpicks/core/utils/mysnackbar.dart';
 import 'package:peerpicks/features/auth/presentation/pages/sign_up_screen.dart';
 import 'package:peerpicks/features/auth/presentation/state/auth_state.dart';
@@ -29,11 +30,19 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     super.dispose();
   }
 
+  Future<void> _handleLogin() async {
+    if (_formKey.currentState!.validate()) {
+      await ref
+          .read(authViewModelProvider.notifier)
+          .login(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          );
+    }
+  }
+
   void _navigateToSignUp() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const SignupPage()),
-    );
+    AppRoutes.push(context, const SignupPage());
   }
 
   void _submitForm() {
