@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peerpicks/core/services/hive/hive_service.dart';
 import 'package:peerpicks/core/services/storage/user_session_service.dart';
-import 'package:peerpicks/features/auth/data/datasources/remote/auth_datasource.dart';
+import 'package:peerpicks/features/auth/data/datasources/auth_datasource.dart';
 import 'package:peerpicks/features/auth/data/models/auth_hive_model.dart';
 
 // Create provider
@@ -14,7 +14,7 @@ final authLocalDataSourceProvider = Provider<AuthLocalDataSource>((ref) {
   );
 });
 
-class AuthLocalDataSource implements IAuthDataSource {
+class AuthLocalDataSource implements IAuthLocalDataSource {
   final HiveService _hiveService;
   final UserSessionService _userSessionService;
 
@@ -23,6 +23,34 @@ class AuthLocalDataSource implements IAuthDataSource {
     required UserSessionService userSessionService,
   }) : _hiveService = hiveService,
        _userSessionService = userSessionService;
+
+  @override
+  Future<AuthHiveModel> register(AuthHiveModel user) async {
+    await _hiveService.register(user);
+    return user;
+  }
+
+  @override
+  Future<AuthHiveModel?> login(String email, String password) async {
+    try {
+      final user = _hiveService.login(email, password);
+
+      if (user != null && user.authId != null) {
+        // Save user session to SharedPreferences for persistent login
+        await _userSessionService.saveUserSession(
+          userId: user.authId!,
+          email: user.email,
+          fullName: user.fullName,
+          username: user.username,
+          phoneNumber: user.phoneNumber,
+          profilePicture: user.profilePicture,
+        );
+      }
+      return user;
+    } catch (e) {
+      return null;
+    }
+  }
 
   @override
   Future<bool> deleteUser(String authId) async {
@@ -74,28 +102,6 @@ class AuthLocalDataSource implements IAuthDataSource {
   }
 
   @override
-  Future<AuthHiveModel?> login(String email, String password) async {
-    try {
-      final user = _hiveService.login(email, password);
-
-      if (user != null && user.authId != null) {
-        // Save user session to SharedPreferences for persistent login
-        await _userSessionService.saveUserSession(
-          userId: user.authId!,
-          email: user.email,
-          fullName: user.fullName,
-          username: user.username,
-          phoneNumber: user.phoneNumber,
-          profilePicture: user.profilePicture,
-        );
-      }
-      return user;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  @override
   Future<bool> logout() async {
     try {
       // Clear the session from SharedPreferences
@@ -103,15 +109,6 @@ class AuthLocalDataSource implements IAuthDataSource {
       return true;
     } catch (e) {
       return false;
-    }
-  }
-
-  @override
-  Future<void> register(AuthHiveModel user) async {
-    try {
-      await _hiveService.register(user);
-    } catch (e) {
-      throw Exception("Registration failed: $e");
     }
   }
 

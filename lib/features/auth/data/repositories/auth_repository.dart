@@ -1,5 +1,9 @@
 import 'package:dartz/dartz.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:peerpicks/core/services/connectivity/network_info.dart';
+import 'package:peerpicks/features/auth/data/datasources/remote/auth_remote_datasource.dart';
+import 'package:peerpicks/features/auth/data/models/auth_api_model.dart';
 import '../../../../core/error/failures.dart';
 import '../datasources/local/auth_local_datasource.dart';
 import '../models/auth_hive_model.dart';
@@ -9,35 +13,73 @@ import '../../domain/repositories/auth_repository.dart';
 // Create provider
 final authRepositoryProvider = Provider<IAuthRepository>((ref) {
   final authDatasource = ref.read(authLocalDataSourceProvider);
-  return AuthRepository(authDatasource: authDatasource);
+  final AuthRemoteDatasource = ref.read(authRemoteDatasourceProvider);
+  final networkInfo = ref.read(networkInfoProvider);
+
+  return AuthRepository(
+    authDatasource: authDatasource,
+    authRemoteDatasource: AuthRemoteDatasource,
+    networkInfo: networkInfo as NetworkInfo,
+  );
 });
 
 class AuthRepository implements IAuthRepository {
   final AuthLocalDataSource _authDataSource;
+  final AuthRemoteDatasource _authRemoteDatasource;
+  final NetworkInfo _networkInfo;
 
-  AuthRepository({required AuthLocalDataSource authDatasource})
-    : _authDataSource = authDatasource;
+  AuthRepository({
+    required AuthLocalDataSource authDatasource,
+    required AuthRemoteDatasource authRemoteDatasource,
+    required NetworkInfo networkInfo,
+  }) : _authDataSource = authDatasource,
+       _authRemoteDatasource = authRemoteDatasource,
+       _networkInfo = networkInfo;
 
   @override
   Future<Either<Failure, bool>> register(AuthEntity user) async {
-    try {
-      // 1. Check if user already exists in Hive
-      final existingUser = await _authDataSource.getUserByEmail(user.email);
-      if (existingUser != null) {
-        return const Left(
-          LocalDatabaseFailure(
-            message: "This email is already registered with PeerPicks",
+    if (await _networkInfo.isConnected) {
+      try {
+        final apiModel = AuthApiModel.fromEntity(user);
+        await _authRemoteDatasource.register(apiModel);
+        return const Right(true);
+      } on DioException catch (e) {
+        return left(
+          ApiFailure(
+            message: e.response?.data['message'] ?? 'Registration failed',
+            statusCode: e.response?.statusCode,
           ),
         );
+      } catch (e) {
+        return Left(ApiFailure(message: e.toString()));
       }
+    } else {
+      try {
+        // 1. Check if user already exists in Hive
+        final existingUser = await _authDataSource.getUserByEmail(user.email);
+        if (existingUser != null) {
+          return const Left(
+            LocalDatabaseFailure(
+              message: "This email is already registered with PeerPicks",
+            ),
+          );
+        }
 
-      // 2. Convert Entity to Hive Model using factory for cleaner code
-      final authModel = AuthHiveModel.fromEntity(user);
-
-      await _authDataSource.register(authModel);
-      return const Right(true);
-    } catch (e) {
-      return Left(LocalDatabaseFailure(message: e.toString()));
+        // 2. Convert Entity to Hive Model using factory for cleaner code
+        final authModel = AuthHiveModel(
+          authId: user.authId,
+          fullName: user.fullName,
+          email: user.email,
+          phoneNumber: user.phoneNumber,
+          username: user.username,
+          password: user.password,
+          profilePicture: user.profilePicture,
+        );
+        await _authDataSource.register(authModel);
+        return const Right(true);
+      } catch (e) {
+        return Left(LocalDatabaseFailure(message: e.toString()));
+      }
     }
   }
 
