@@ -6,15 +6,15 @@ import '../../../../core/error/failures.dart';
 import '../repositories/auth_repository.dart';
 
 // Create Provider
-final logoutUseCaseProvider = Provider<LogoutUsCase>((ref) {
+final logoutUseCaseProvider = Provider<LogoutUseCase>((ref) {
   final authRepository = ref.read(authRepositoryProvider);
-  return LogoutUsCase(authRepository: authRepository);
+  return LogoutUseCase(authRepository: authRepository);
 });
 
-class LogoutUsCase implements UsecaseWithoutParms<bool> {
+class LogoutUseCase implements UsecaseWithoutParms<bool> {
   final IAuthRepository _authRepository;
 
-  LogoutUsCase({required IAuthRepository authRepository})
+  LogoutUseCase({required IAuthRepository authRepository})
     : _authRepository = authRepository;
 
   @override

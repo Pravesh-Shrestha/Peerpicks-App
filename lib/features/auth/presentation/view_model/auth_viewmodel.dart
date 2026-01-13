@@ -15,7 +15,7 @@ class AuthViewModel extends Notifier<AuthState> {
   late final RegisterUseCase _registerUseCase;
   late final LoginUseCase _loginUseCase;
   late final GetCurrentUserUseCase _getCurrentUserUseCase;
-  late final LogoutUsCase _logoutUseCase;
+  late final LogoutUseCase _logoutUseCase;
 
   @override
   AuthState build() {

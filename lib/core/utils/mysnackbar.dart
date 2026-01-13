@@ -28,7 +28,7 @@ showMySnackBar({
           ),
         ],
       ),
-      backgroundColor: isError ? AppColors.error : AppColors.success,
+      backgroundColor: isError ? AppColors.error : color,
       duration: const Duration(seconds: 2),
       behavior: SnackBarBehavior.floating, // Modern floating design
       margin: const EdgeInsets.all(16),

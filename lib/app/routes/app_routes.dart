@@ -32,4 +32,13 @@ class AppRoutes {
   static void popToFirst(BuildContext context) {
     Navigator.popUntil(context, (route) => route.isFirst);
   }
+
+  //ROUTE AFTER LOGOUT
+  static void navigateToSignInAfterLogout(BuildContext context, Widget page) {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => page),
+      (route) => false,
+    );
+  }
 }
