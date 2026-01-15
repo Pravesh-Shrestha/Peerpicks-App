@@ -36,14 +36,14 @@ class AuthLocalDataSource implements IAuthLocalDataSource {
       final user = _hiveService.login(email, password);
 
       if (user != null && user.authId != null) {
-        // UPDATED: Syncing with the UserSessionService using new fields.
-        // Removed: username and phoneNumber (as per user.model.ts)
-        // Added/Maintained: fullName, email, and phone
+        // Pass the necessary fields to the session service
         await _userSessionService.saveUserSession(
           userId: user.authId!,
           email: user.email,
           fullName: user.fullName,
-          phone: user.phone, // Matching the 'phone' field from server
+          // For local login, we pass a placeholder or the last known token
+          token: 'OFFLINE_TOKEN',
+          phone: user.phone,
           profilePicture: user.profilePicture,
         );
       }

@@ -25,13 +25,17 @@ class AuthApiModel {
 
   factory AuthApiModel.fromJson(Map<String, dynamic> json) {
     return AuthApiModel(
-      id: json['_id'] as String?,
-      fullName: json['fullName'] as String,
-      email: json['email'] as String,
+      // Check both id and _id to be safe across different endpoints
+      id: (json['_id'] ?? json['id']) as String?,
+      fullName: json['fullName'] as String? ?? '',
+      email: json['email'] as String? ?? '',
       password: json['password'] as String?,
-      gender: json['gender'] as String,
-      dob: DateTime.parse(json['dob'] as String),
-      phone: json['phone'] as String,
+      gender: json['gender'] as String? ?? '',
+      // Use tryParse or a fallback for dates to prevent crashes on bad data
+      dob: json['dob'] != null
+          ? DateTime.parse(json['dob'] as String)
+          : DateTime.now(),
+      phone: json['phone'] as String? ?? '',
       role: json['role'] as String? ?? 'user',
       profilePicture: json['profilePicture'] as String?,
     );

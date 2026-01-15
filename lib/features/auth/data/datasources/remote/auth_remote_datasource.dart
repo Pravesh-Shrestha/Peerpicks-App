@@ -44,16 +44,21 @@ class AuthRemoteDatasource implements IAuthRemoteDataSource {
       data: {"email": email, "password": password},
     );
 
-    if (response.data["success"] == true) {
-      final data = response.data["data"] as Map<String, dynamic>;
-      final user = AuthApiModel.fromJson(data);
+    // 1. Check status code instead of a "success" key your server might not send
+    if (response.statusCode == 200 && response.data['user'] != null) {
+      // 2. Access the "user" key directly from the response
+      final userData = response.data['user'] as Map<String, dynamic>;
+      final String token = response.data['token']; // Extract token
 
-      // UPDATED: Removed 'username' as it's no longer in our User Model.
-      // We pass fullName to satisfy the session service if it needs a display name.
+      final user = AuthApiModel.fromJson(userData);
+
+      // 3. Pass the token to the session service so it compiles and works
       await _userSessionService.saveUserSession(
         userId: user.id!,
         email: user.email,
         fullName: user.fullName,
+        token: token, // Added token
+        phone: user.phone,
       );
 
       return user;
