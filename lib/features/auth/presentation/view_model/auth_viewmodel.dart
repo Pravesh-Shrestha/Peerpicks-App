@@ -35,13 +35,16 @@ class AuthViewModel extends Notifier<AuthState> {
   Future<void> register(AuthEntity user) async {
     state = state.copyWith(status: AuthStatus.loading);
 
+    // UPDATED: Passing the new fields to RegisterParams
     final result = await _registerUseCase(
       RegisterParams(
         fullName: user.fullName,
         email: user.email,
-        username: user.username,
         password: user.password!,
-        phoneNumber: user.phoneNumber,
+        gender: user.gender,
+        dob: user.dob,
+        phone: user.phone,
+        profilePicture: user.profilePicture,
       ),
     );
 

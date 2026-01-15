@@ -38,7 +38,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     showMySnackBar(
       context: context,
       message: 'Onboarding skipped. Proceeding to Sign In.',
-      color: Colors.black,
+      color: const Color.fromARGB(255, 0, 0, 0),
     );
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const SignInScreen()),

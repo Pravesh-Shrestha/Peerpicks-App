@@ -36,13 +36,14 @@ class AuthLocalDataSource implements IAuthLocalDataSource {
       final user = _hiveService.login(email, password);
 
       if (user != null && user.authId != null) {
-        // Save user session to SharedPreferences for persistent login
+        // UPDATED: Syncing with the UserSessionService using new fields.
+        // Removed: username and phoneNumber (as per user.model.ts)
+        // Added/Maintained: fullName, email, and phone
         await _userSessionService.saveUserSession(
           userId: user.authId!,
           email: user.email,
           fullName: user.fullName,
-          username: user.username,
-          phoneNumber: user.phoneNumber,
+          phone: user.phone, // Matching the 'phone' field from server
           profilePicture: user.profilePicture,
         );
       }
@@ -65,18 +66,15 @@ class AuthLocalDataSource implements IAuthLocalDataSource {
   @override
   Future<AuthHiveModel?> getCurrentUser() async {
     try {
-      // 1. Check if user is logged in via session service
       if (!_userSessionService.isLoggedIn()) {
         return null;
       }
 
-      // 2. Get user ID from the active session
       final userId = _userSessionService.getCurrentUserId();
       if (userId == null) {
         return null;
       }
 
-      // 3. Fetch the full user model from Hive database
       return _hiveService.getUserById(userId);
     } catch (e) {
       return null;
@@ -104,7 +102,6 @@ class AuthLocalDataSource implements IAuthLocalDataSource {
   @override
   Future<bool> logout() async {
     try {
-      // Clear the session from SharedPreferences
       await _userSessionService.clearSession();
       return true;
     } catch (e) {

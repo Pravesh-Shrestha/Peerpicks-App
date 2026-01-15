@@ -4,66 +4,73 @@ class AuthApiModel {
   final String? id;
   final String fullName;
   final String email;
-  final String? phoneNumber;
-  final String username;
   final String? password;
+  final String gender;
+  final DateTime dob;
+  final String phone;
+  final String role;
+  final String? profilePicture;
 
   AuthApiModel({
     this.id,
     required this.fullName,
     required this.email,
-    this.phoneNumber,
-    required this.username,
     this.password,
+    required this.gender,
+    required this.dob,
+    required this.phone,
+    required this.role,
+    this.profilePicture,
   });
 
-  // from Json
   factory AuthApiModel.fromJson(Map<String, dynamic> json) {
     return AuthApiModel(
       id: json['_id'] as String?,
       fullName: json['fullName'] as String,
       email: json['email'] as String,
-      phoneNumber: json['phoneNumber'] as String?,
-      username: json['username'] as String,
       password: json['password'] as String?,
+      gender: json['gender'] as String,
+      dob: DateTime.parse(json['dob'] as String),
+      phone: json['phone'] as String,
+      role: json['role'] as String? ?? 'user',
+      profilePicture: json['profilePicture'] as String?,
     );
   }
 
-  // to Json
-  Map<String, dynamic> toJson() {
-    return {
-      'fullName': fullName,
-      'email': email,
-      'phoneNumber': phoneNumber,
-      'username': username,
-      'password': password,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+    'fullName': fullName,
+    'email': email,
+    'password': password,
+    'gender': gender,
+    'dob': dob.toIso8601String(),
+    'phone': phone,
+    'role': role,
+    'profilePicture': profilePicture,
+  };
 
-  //from Entity
-  factory AuthApiModel.fromEntity(AuthEntity entity) {
-    return AuthApiModel(
-      id: entity.authId,
-      fullName: entity.fullName,
-      email: entity.email,
-      phoneNumber: entity.phoneNumber,
-      username: entity.username,
-      password: entity.password,
-    );
-  }
+  AuthEntity toEntity() => AuthEntity(
+    authId: id,
+    fullName: fullName,
+    email: email,
+    password: password,
+    gender: gender,
+    dob: dob,
+    phone: phone,
+    role: role,
+    profilePicture: profilePicture,
+  );
 
-  // to Entity
-  AuthEntity toEntity() {
-    return AuthEntity(
-      authId: id,
-      fullName: fullName,
-      email: email,
-      phoneNumber: phoneNumber ?? '',
-      username: username,
-      password: password,
-    );
-  }
-
+  factory AuthApiModel.fromEntity(AuthEntity entity) => AuthApiModel(
+    id: entity.authId,
+    fullName: entity.fullName,
+    email: entity.email,
+    password: entity.password,
+    gender: entity.gender,
+    dob: entity.dob,
+    phone: entity.phone,
+    role: entity.role,
+    profilePicture: entity.profilePicture,
+  );
   //toEntityList
   static List<AuthEntity> toEntityList(List<AuthApiModel> models) {
     return models.map((model) => model.toEntity()).toList();
