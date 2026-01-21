@@ -3,8 +3,8 @@ class ApiEndpoints {
 
   // Updated to Port 5000 to match: const PORT = process.env.PORT || 5000;
   // Use 10.0.2.2 for Android Emulator, or your IP for Physical Devices
-  //   static const String baseUrl = 'http://192.168.137.1:3000/api/';
-  //   static const String baseUrl = 'http://localhost:3000/api/';
+  // static const String baseUrl = 'http://192.168.137.1:3000/api/';
+  // static const String baseUrl = 'http://localhost:3000/api/';
   static const String baseUrl = 'http://10.0.2.2:3000/api/';
 
   static const Duration connectionTimeout = Duration(seconds: 30);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peerpicks/app/routes/app_routes.dart';
+import 'package:peerpicks/common/app_colors.dart';
 import 'package:peerpicks/core/utils/mysnackbar.dart';
 import 'package:peerpicks/features/auth/presentation/pages/sign_up_screen.dart';
 import 'package:peerpicks/features/auth/presentation/state/auth_state.dart';
@@ -109,7 +110,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Colors.green, // Replace with peerPicksGreen
+                        color: AppColors.primaryGreen,
                       ),
                     ),
                     Image.asset(
@@ -182,7 +183,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           TextSpan(
                             text: "Sign up.",
                             style: TextStyle(
-                              color: Colors.green,
+                              color: AppColors.primaryGreen,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

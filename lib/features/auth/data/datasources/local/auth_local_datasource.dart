@@ -45,6 +45,7 @@ class AuthLocalDataSource implements IAuthLocalDataSource {
           token: 'OFFLINE_TOKEN',
           phone: user.phone,
           profilePicture: user.profilePicture,
+          dob: user.dob,
         );
       }
       return user;

@@ -91,7 +91,7 @@ class AuthViewModel extends Notifier<AuthState> {
     );
   }
 
-  /// Handles user logout and clears the local session
+  /// Handles user logout and clears the local session and sends back to login page
   Future<void> logout() async {
     state = state.copyWith(status: AuthStatus.loading);
 

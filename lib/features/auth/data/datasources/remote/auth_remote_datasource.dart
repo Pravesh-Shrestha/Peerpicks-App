@@ -59,6 +59,7 @@ class AuthRemoteDatasource implements IAuthRemoteDataSource {
         fullName: user.fullName,
         token: token, // Added token
         phone: user.phone,
+        dob: user.dob,
       );
 
       return user;

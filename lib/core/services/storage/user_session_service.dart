@@ -21,6 +21,7 @@ class UserSessionService {
   static const String _keyUserFullName = 'user_full_name';
   static const String _keyUserPhone = 'user_phone';
   static const String _keyUserProfilePicture = 'user_profile_picture';
+  static const String _keyUserDob = 'user_dob';
   static const String _keyAuthToken = 'auth_token'; // NEW: For JWT Token
 
   UserSessionService({required SharedPreferences prefs}) : _prefs = prefs;
@@ -29,6 +30,7 @@ class UserSessionService {
     required String userId,
     required String email,
     required String fullName,
+    required DateTime dob,
     required String token, // NEW: Added required token parameter
     String? phone,
     String? profilePicture,
@@ -38,10 +40,11 @@ class UserSessionService {
     await _prefs.setString(_keyUserEmail, email);
     await _prefs.setString(_keyUserFullName, fullName);
     await _prefs.setString(_keyAuthToken, token); // NEW: Save the token
-
+    await _prefs.setString(_keyUserDob, dob.toIso8601String());
     if (phone != null) await _prefs.setString(_keyUserPhone, phone);
-    if (profilePicture != null)
+    if (profilePicture != null) {
       await _prefs.setString(_keyUserProfilePicture, profilePicture);
+    }
   }
 
   // Getters
@@ -52,6 +55,9 @@ class UserSessionService {
   String? getCurrentUserEmail() => _prefs.getString(_keyUserEmail);
   String? getCurrentUserFullName() => _prefs.getString(_keyUserFullName);
   String? getCurrentUserPhone() => _prefs.getString(_keyUserPhone);
+  DateTime? getCurrentUserDob() => _prefs.getString(_keyUserDob) != null
+      ? DateTime.parse(_prefs.getString(_keyUserDob)!)
+      : null;
   String? getCurrentUserProfilePicture() =>
       _prefs.getString(_keyUserProfilePicture);
 
