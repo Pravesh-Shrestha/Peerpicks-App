@@ -9,58 +9,56 @@ part 'auth_hive_model.g.dart';
 class AuthHiveModel extends HiveObject {
   @HiveField(0)
   final String? authId;
-
   @HiveField(1)
   final String fullName;
-
   @HiveField(2)
   final String email;
-
   @HiveField(3)
-  final String? phoneNumber;
-
-  @HiveField(4)
-  final String username;
-
-  @HiveField(5)
   final String? password;
-
+  @HiveField(4)
+  final String gender;
+  @HiveField(5)
+  final DateTime dob;
   @HiveField(6)
+  final String phone;
+  @HiveField(7)
+  final String role;
+  @HiveField(8)
   final String? profilePicture;
 
   AuthHiveModel({
     String? authId,
     required this.fullName,
     required this.email,
-    this.phoneNumber,
-    required this.username,
     this.password,
+    required this.gender,
+    required this.dob,
+    required this.phone,
+    this.role = 'user',
     this.profilePicture,
   }) : authId = authId ?? const Uuid().v4();
 
-  // Convert Hive Model to Domain Entity
-  AuthEntity toEntity() {
-    return AuthEntity(
-      authId: authId,
-      fullName: fullName,
-      email: email,
-      phoneNumber: phoneNumber?.toString() ?? '',
-      username: username,
-      password: password,
-      profilePicture: profilePicture,
-    );
-  }
+  factory AuthHiveModel.fromEntity(AuthEntity entity) => AuthHiveModel(
+    authId: entity.authId,
+    fullName: entity.fullName,
+    email: entity.email,
+    password: entity.password,
+    gender: entity.gender,
+    dob: entity.dob,
+    phone: entity.phone,
+    role: entity.role,
+    profilePicture: entity.profilePicture,
+  );
 
-  // Create Hive Model from Domain Entity
-  factory AuthHiveModel.fromEntity(AuthEntity entity) {
-    return AuthHiveModel(
-      authId: entity.authId,
-      fullName: entity.fullName,
-      email: entity.email,
-      phoneNumber: entity.phoneNumber,
-      username: entity.username,
-      password: entity.password,
-      profilePicture: entity.profilePicture,
-    );
-  }
+  AuthEntity toEntity() => AuthEntity(
+    authId: authId,
+    fullName: fullName,
+    email: email,
+    password: password,
+    gender: gender,
+    dob: dob,
+    phone: phone,
+    role: role,
+    profilePicture: profilePicture,
+  );
 }

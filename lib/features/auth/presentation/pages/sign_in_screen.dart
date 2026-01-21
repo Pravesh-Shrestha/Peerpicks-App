@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:peerpicks/app/routes/app_routes.dart';
+import 'package:peerpicks/common/app_colors.dart';
 import 'package:peerpicks/core/utils/mysnackbar.dart';
 import 'package:peerpicks/features/auth/presentation/pages/sign_up_screen.dart';
 import 'package:peerpicks/features/auth/presentation/state/auth_state.dart';
@@ -7,7 +9,6 @@ import 'package:peerpicks/features/auth/presentation/view_model/auth_viewmodel.d
 import 'package:peerpicks/features/auth/presentation/widgets/auth_widget.dart';
 import 'package:peerpicks/features/dashboard/presentation/pages/home_screen.dart';
 
-// Change to ConsumerStatefulWidget to access "ref"
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
 
@@ -30,15 +31,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   }
 
   void _navigateToSignUp() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const SignupPage()),
-    );
+    AppRoutes.push(context, const SignupPage());
   }
 
+  // Consolidated submission logic
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
-      // Call the ViewModel login logic
       ref
           .read(authViewModelProvider.notifier)
           .login(
@@ -51,8 +49,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) return 'Email is required.';
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if (!emailRegex.hasMatch(value))
+    if (!emailRegex.hasMatch(value)) {
       return 'Please enter a valid email address.';
+    }
     return null;
   }
 
@@ -67,25 +66,30 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     // Listen for state changes (Success or Error)
     ref.listen<AuthState>(authViewModelProvider, (previous, next) {
       if (next.status == AuthStatus.authenticated) {
-        showMySnackBar(
-          context: context,
-          message: 'Login Successful!',
-          color: peerPicksGreen,
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        if (context.mounted) {
+          showMySnackBar(
+            context: context,
+            message: 'Login Successful!',
+            color: Colors.green, // Ensure peerPicksGreen is defined globally
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        }
       } else if (next.status == AuthStatus.error) {
-        showMySnackBar(
-          context: context,
-          message: next.errorMessage ?? 'Login Failed',
-          color: Colors.red,
-        );
+        if (context.mounted) {
+          showMySnackBar(
+            context: context,
+            message: next.errorMessage ?? 'Login Failed',
+            color: Colors.red,
+          );
+        }
       }
     });
 
     final authState = ref.watch(authViewModelProvider);
+    final bool isLoading = authState.status == AuthStatus.loading;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -106,23 +110,18 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: peerPicksGreen,
+                        color: AppColors.primaryGreen,
                       ),
                     ),
-                    // Ensure you have this asset in pubspec.yaml
                     Image.asset(
                       "assets/images/logos/logo.png",
                       height: 80,
-                      errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.star,
-                        size: 80,
-                        color: peerPicksGreen,
-                      ),
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.star, size: 80, color: Colors.green),
                     ),
                   ],
                 ),
                 const SizedBox(height: 50),
-
                 buildAuthTextFormField(
                   controller: _emailController,
                   validator: _validateEmail,
@@ -132,11 +131,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   suffixIcon: const Icon(
                     Icons.check,
                     size: 20,
-                    color: peerPicksGreen,
+                    color: Colors.green,
                   ),
                 ),
                 const SizedBox(height: 24),
-
                 buildAuthTextFormField(
                   controller: _passwordController,
                   validator: _validatePassword,
@@ -151,36 +149,32 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-
                 Align(
                   alignment: Alignment.centerRight,
-                  child: Text(
-                    "Forgot password?",
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                  child: InkWell(
+                    onTap: () {
+                      // Add forgot password navigation here
+                    },
+                    child: Text(
+                      "Forgot password?",
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 40),
-
-                // Show loading indicator if state is loading
                 buildActionButton(
-                  text: authState.status == AuthStatus.loading
-                      ? "PLEASE WAIT..."
-                      : "SIGN IN",
-                  onTap: authState.status == AuthStatus.loading
-                      ? () {}
-                      : _submitForm,
+                  text: isLoading ? "PLEASE WAIT..." : "SIGN IN",
+                  onTap: isLoading ? () {} : _submitForm,
                   color: Colors.black,
                 ),
                 const SizedBox(height: 18),
-
                 Center(
                   child: GestureDetector(
-                    onTap: _navigateToSignUp,
+                    onTap: isLoading ? null : _navigateToSignUp,
                     child: const Text.rich(
                       TextSpan(
                         style: TextStyle(fontSize: 14, color: Colors.grey),
@@ -189,7 +183,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                           TextSpan(
                             text: "Sign up.",
                             style: TextStyle(
-                              color: peerPicksGreen,
+                              color: AppColors.primaryGreen,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -198,7 +192,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 60),
                 buildSocialRow(),
                 const SizedBox(height: 30),

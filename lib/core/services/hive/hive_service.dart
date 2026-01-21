@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart'; // Use hive_flutter
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:peerpicks/core/constants/hive_table_constant.dart';
 import 'package:peerpicks/features/auth/data/models/auth_hive_model.dart';
@@ -9,31 +9,28 @@ final hiveServiceProvider = Provider<HiveService>((ref) {
 });
 
 class HiveService {
-  // init
+  // Initialize Hive
   Future<void> init() async {
     final directory = await getApplicationDocumentsDirectory();
     final path = '${directory.path}/${HiveTableConstant.dbName}';
     Hive.init(path);
 
-    // register adapter
+    // Register adapter
     _registerAdapter();
     await _openBoxes();
   }
 
   void _registerAdapter() {
+    // Note: If you changed field indexes in AuthHiveModel,
+    // you must increment the TypeId or delete the app/box.
     if (!Hive.isAdapterRegistered(HiveTableConstant.authTypeId)) {
       Hive.registerAdapter(AuthHiveModelAdapter());
     }
   }
 
-  // box open
+  // Box management
   Future<void> _openBoxes() async {
     await Hive.openBox<AuthHiveModel>(HiveTableConstant.authTable);
-  }
-
-  // box close
-  Future<void> _close() async {
-    await Hive.close();
   }
 
   Box<AuthHiveModel> get _authBox =>
@@ -42,11 +39,13 @@ class HiveService {
   // ======================= Auth Queries =========================
 
   Future<void> register(AuthHiveModel user) async {
+    // user.authId is the key, ensuring no duplicates for the same ID
     await _authBox.put(user.authId, user);
   }
 
   AuthHiveModel? login(String email, String password) {
     try {
+      // Local login check against encrypted/hashed or plain passwords stored in Hive
       return _authBox.values.firstWhere(
         (user) => user.email == email && user.password == password,
       );
@@ -81,5 +80,10 @@ class HiveService {
 
   Future<void> deleteUser(String authId) async {
     await _authBox.delete(authId);
+  }
+
+  // Clear all auth data (useful for testing or total reset)
+  Future<void> clearAll() async {
+    await _authBox.clear();
   }
 }
