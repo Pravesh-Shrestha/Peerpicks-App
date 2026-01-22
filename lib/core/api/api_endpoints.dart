@@ -1,11 +1,30 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
+
 class ApiEndpoints {
   ApiEndpoints._();
 
-  // Updated to Port 5000 to match: const PORT = process.env.PORT || 5000;
-  // Use 10.0.2.2 for Android Emulator, or your IP for Physical Devices
-  // static const String baseUrl = 'http://192.168.137.1:3000/api/';
-  // static const String baseUrl = 'http://localhost:3000/api/';
-  static const String baseUrl = 'http://10.0.2.2:3000/api/';
+  static const bool isPhysicalDevice = false;
+
+  static const String compIpAddress = "192.168.0.1";
+
+  static String get baseUrl {
+    if (isPhysicalDevice) {
+      return 'http://$compIpAddress:3000/api/v1';
+    }
+    // yadi android
+    if (kIsWeb) {
+      return 'http://localhost:3000/api/';
+    } else if (Platform.isAndroid) {
+      return 'http://10.0.2.2:3000/api/';
+    } else if (Platform.isIOS) {
+      return 'http://localhost:3000/api/';
+    } else {
+      return 'http://localhost:3000/api/';
+    }
+  }
+
 
   static const Duration connectionTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
