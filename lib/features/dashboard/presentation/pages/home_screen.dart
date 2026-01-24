@@ -3,7 +3,7 @@ import 'package:peerpicks/features/reviews/presentation/pages/add_review_screen.
 import 'package:peerpicks/features/dashboard/presentation/pages/dashboard_screen.dart';
 import 'package:peerpicks/features/dashboard/presentation/pages/favorites_screen.dart';
 import 'package:peerpicks/features/dashboard/presentation/pages/notification_screen.dart';
-import 'package:peerpicks/features/dashboard/presentation/pages/profile_screen.dart';
+import 'package:peerpicks/features/profile/presentation/pages/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

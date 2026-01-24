@@ -7,6 +7,13 @@ class AppColors {
   ); // Official PeerPicks Green
   static const Color secondaryGreen = Color(0xFF6ABF00);
 
+  // Brand Gradients
+  static const Gradient primaryGradient = LinearGradient(
+    colors: [primaryGreen, Color(0xFF9DC449)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
   // Social Colors
   static const Color facebookBlue = Color(0xFF1877F2);
   static const Color googleRed = Color(0xFFDB4437);
@@ -26,4 +33,13 @@ class AppColors {
   static const Color success = Color(0xFF75A638);
   static const Color indicatorActive = Color(0xFF75A638);
   static const Color indicatorInactive = Color(0xFFBDC3C7);
+
+  // Custom Shadows for PeerPicks UI
+  static List<BoxShadow> primaryShadow = [
+    BoxShadow(
+      color: primaryGreen.withOpacity(0.25),
+      blurRadius: 12,
+      offset: const Offset(0, 6),
+    ),
+  ];
 }
