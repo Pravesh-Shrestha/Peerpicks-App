@@ -51,7 +51,7 @@ void main() {
   }
 
   group('ProfileScreen Widget Tests', () {
-    testWidgets('Verify user data displays correctly from session', (
+    testWidgets('WIDGET-Verify user data displays correctly from session', (
       tester,
     ) async {
       await tester.pumpWidget(createProfileScreen());
@@ -67,7 +67,7 @@ void main() {
       expect(find.text('J'), findsOneWidget);
     });
 
-    testWidgets('Verify Edit Profile navigation via Icon Button', (
+    testWidgets('WIDGET-Verify Edit Profile navigation via Icon Button', (
       tester,
     ) async {
       await tester.pumpWidget(createProfileScreen());
@@ -86,7 +86,9 @@ void main() {
       expect(find.byType(EditProfileScreen), findsOneWidget);
     });
 
-    testWidgets('Logout button should trigger LogoutDialog', (tester) async {
+    testWidgets('WIDGET-Logout button should trigger LogoutDialog', (
+      tester,
+    ) async {
       await tester.pumpWidget(createProfileScreen());
       await tester.pumpAndSettle();
 

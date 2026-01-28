@@ -7,20 +7,15 @@ import 'package:peerpicks/features/auth/presentation/pages/sign_in_screen.dart';
 import 'package:peerpicks/core/services/storage/user_session_service.dart'; // Import your provider
 
 void main() {
-  testWidgets('Tapping Skip on Onboarding navigates to SignInScreen', (
+  testWidgets('WIDGET-Tapping Skip on Onboarding navigates to SignInScreen', (
     WidgetTester tester,
   ) async {
-    // 1. Setup Mock SharedPreferences (matches your main.dart logic)
     SharedPreferences.setMockInitialValues({});
     final sharedPrefs = await SharedPreferences.getInstance();
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          // 2. You MUST override the sharedPreferencesProvider in tests
-          // because your SignInScreen depends on it indirectly.
-          sharedPreferencesProvider.overrideWithValue(sharedPrefs),
-        ],
+        overrides: [sharedPreferencesProvider.overrideWithValue(sharedPrefs)],
         child: const MaterialApp(home: OnboardingScreen()),
       ),
     );
@@ -30,9 +25,6 @@ void main() {
     expect(skipButton, findsOneWidget);
 
     await tester.tap(skipButton);
-
-    // 3. pumpAndSettle waits for the Navigator animation AND
-    // any internal state initialization in SignInScreen.
     await tester.pumpAndSettle();
 
     // Verify we are now on the SignInScreen

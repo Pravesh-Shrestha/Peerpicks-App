@@ -6,7 +6,7 @@ import 'package:peerpicks/features/auth/presentation/pages/sign_in_screen.dart';
 import 'package:peerpicks/core/services/storage/user_session_service.dart';
 
 void main() {
-  testWidgets('Login UI Interaction and Validation', (
+  testWidgets('WIDGET-Login UI Interaction and Validation', (
     WidgetTester tester,
   ) async {
     // 1. Setup Mock SharedPreferences
