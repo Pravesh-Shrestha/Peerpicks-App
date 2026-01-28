@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:peerpicks/core/constants/hive_table_constant.dart';
 import 'package:peerpicks/features/auth/data/models/auth_hive_model.dart';
+import 'package:peerpicks/features/category/data/models/category_hive_model.dart';
 
 final hiveServiceProvider = Provider<HiveService>((ref) {
   return HiveService();
@@ -85,5 +86,35 @@ class HiveService {
   // Clear all auth data (useful for testing or total reset)
   Future<void> clearAll() async {
     await _authBox.clear();
+  }
+
+  // ======================= Category Queries =========================
+
+  Box<CategoryHiveModel> get _categoryBox =>
+      Hive.box<CategoryHiveModel>(HiveTableConstant.categoryTable);
+
+  Future<CategoryHiveModel> createCategory(CategoryHiveModel category) async {
+    await _categoryBox.put(category.categoryId, category);
+    return category;
+  }
+
+  List<CategoryHiveModel> getAllCategories() {
+    return _categoryBox.values.toList();
+  }
+
+  CategoryHiveModel? getCategoryById(String categoryId) {
+    return _categoryBox.get(categoryId);
+  }
+
+  Future<bool> updateCategory(CategoryHiveModel category) async {
+    if (_categoryBox.containsKey(category.categoryId)) {
+      await _categoryBox.put(category.categoryId, category);
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> deleteCategory(String categoryId) async {
+    await _categoryBox.delete(categoryId);
   }
 }

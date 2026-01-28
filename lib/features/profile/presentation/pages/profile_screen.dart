@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peerpicks/app/routes/app_routes.dart';
+import 'package:peerpicks/core/api/api_endpoints.dart';
 import 'package:peerpicks/core/widgets/logout_dialog.dart';
 import 'package:peerpicks/features/auth/presentation/state/auth_state.dart';
 import 'package:peerpicks/features/auth/presentation/view_model/auth_viewmodel.dart';
 import 'package:peerpicks/core/services/storage/user_session_service.dart';
-import 'package:peerpicks/features/dashboard/presentation/pages/edit_profile_screen.dart';
+import 'package:peerpicks/features/profile/presentation/pages/edit_profile_screen.dart';
 import 'package:peerpicks/features/auth/presentation/pages/sign_in_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -22,7 +23,7 @@ class ProfileScreen extends ConsumerWidget {
       }
     });
 
-    // 2. Access session data
+    // 2. Access session data - ref.watch ensures UI updates when data changes
     final userSession = ref.watch(userSessionServiceProvider);
     final userName = userSession.getCurrentUserFullName() ?? 'Guest User';
     final userEmail = userSession.getCurrentUserEmail() ?? 'guest@example.com';
@@ -48,12 +49,11 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ],
       ),
-      // Use SingleChildScrollView to prevent UI overlap on tablet/landscape
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-            // --- TOP SECTION: LIME HEADER + FLOATING BLACK CARD ---
+            // --- TOP SECTION ---
             Stack(
               clipBehavior: Clip.none,
               children: [
@@ -62,12 +62,11 @@ class ProfileScreen extends ConsumerWidget {
                   top: 0,
                   left: 20,
                   right: 20,
-                  child: _buildProfileCard(context, userName, userEmail),
+                  child: _buildProfileCard(context, ref, userName, userEmail),
                 ),
               ],
             ),
 
-            // Spacer to account for the overlapping height of the card
             const SizedBox(height: 150),
 
             // --- MIDDLE SECTION: MENU ITEMS ---
@@ -104,12 +103,11 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
 
-            const SizedBox(height: 2),
+            const SizedBox(height: 40),
 
             // --- BOTTOM SECTION: LOGOUT BUTTON ---
-            // Added bottom padding to ensure it's not cut off by floating nav bars
             Padding(
-              padding: const EdgeInsets.only(bottom: 120),
+              padding: const EdgeInsets.only(bottom: 40),
               child: Center(
                 child: ElevatedButton.icon(
                   onPressed: () => _showLogout(context, ref),
@@ -139,9 +137,19 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  // --- WIDGET BUILDERS ---
+  Widget _buildProfileCard(
+    BuildContext context,
+    WidgetRef ref,
+    String name,
+    String email,
+  ) {
+    // 1. Access session and server image path
+    final userSession = ref.watch(userSessionServiceProvider);
+    final String? serverImagePath = userSession.getCurrentUserProfilePicture();
 
-  Widget _buildProfileCard(BuildContext context, String name, String email) {
+    // Generate Initial for the Avatar fallback
+    final String initial = name.isNotEmpty ? name[0].toUpperCase() : "?";
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -159,11 +167,30 @@ class ProfileScreen extends ConsumerWidget {
         children: [
           Row(
             children: [
-              const CircleAvatar(
+              // --- UPDATED AVATAR LOGIC ---
+              CircleAvatar(
                 radius: 32,
-                backgroundColor: Colors.grey,
-                backgroundImage: NetworkImage(
-                  'https://via.placeholder.com/150',
+                backgroundColor: peerLime,
+                child: CircleAvatar(
+                  radius: 30,
+                  backgroundColor: const Color(0xFF2C2C2C),
+                  // Priority: Use the server image if it exists, otherwise show initial
+                  backgroundImage: serverImagePath != null
+                      ? NetworkImage(
+                          "http://10.0.2.2:3000$serverImagePath",
+                        ) // Combine Base + Path
+                      : null,
+
+                  child: serverImagePath == null
+                      ? Text(
+                          initial,
+                          style: const TextStyle(
+                            color: peerLime,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                          ),
+                        )
+                      : null,
                 ),
               ),
               const SizedBox(width: 15),
@@ -178,11 +205,15 @@ class ProfileScreen extends ConsumerWidget {
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       email,
                       style: const TextStyle(color: Colors.grey, fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -223,6 +254,8 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 }
+
+// Keep your _Stat and _MenuItem widgets as they are...
 
 class _Stat extends StatelessWidget {
   final String value;

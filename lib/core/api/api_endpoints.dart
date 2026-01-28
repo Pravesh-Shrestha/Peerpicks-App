@@ -1,28 +1,45 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+
 class ApiEndpoints {
   ApiEndpoints._();
 
-  // Updated to Port 5000 to match: const PORT = process.env.PORT || 5000;
-  // Use 10.0.2.2 for Android Emulator, or your IP for Physical Devices
-  // static const String baseUrl = 'http://192.168.137.1:3000/api/';
-  // static const String baseUrl = 'http://localhost:3000/api/';
-  static const String baseUrl = 'http://10.0.2.2:3000/api/';
+  static const bool isPhysicalDevice = false;
+  static const String compIpAddress = "192.168.0.1";
+
+  // This returns the API base URL
+  static String get baseUrl {
+    if (isPhysicalDevice) {
+      return 'http://$compIpAddress:3000/api/';
+    }
+    if (kIsWeb) {
+      return 'http://localhost:3000/api/';
+    } else if (Platform.isAndroid) {
+      return 'http://10.0.2.2:3000/api/';
+    } else {
+      return 'http://localhost:3000/api/';
+    }
+  }
+
+  // Used for displaying images from the server's static folder
+  static String get serverBaseUrl {
+    if (isPhysicalDevice) return 'http://$compIpAddress:3000';
+    return 'http://10.0.2.2:3000';
+  }
 
   static const Duration connectionTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
 
-  // ============ Auth Endpoints ============
-  // Since you used app.use('/api/auth', authRoutes) in Express:
+  // Auth Routes
+  static const String login = 'auth/login';
+  static const String register = 'auth/register';
+  // Matches router.put("/update-profile", ...) in auth.routes.ts
+  static const String updateProfile = 'auth/update-profile';
 
-  static const String login = 'auth/login'; // Becomes: .../api/auth/login
-  static const String register =
-      'auth/register'; // Becomes: .../api/auth/register
-
-  // If you add a get user route in your auth.routes.ts later:
   static const String users = 'auth/';
   static String userById(String id) => 'auth/$id';
 
   // ============ Other Endpoints ============
-  // These should match whatever prefix you use in app.ts (e.g., app.use('/api/establishments', ...))
   static const String establishments = 'establishments';
   static String establishmentById(String id) => 'establishments/$id';
 
