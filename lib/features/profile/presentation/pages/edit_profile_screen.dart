@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:peerpicks/core/api/api_client.dart';
 import 'package:peerpicks/core/api/api_endpoints.dart';
 import 'package:peerpicks/core/services/storage/user_session_service.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -153,65 +154,51 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
-  // --- UPDATED API UPLOAD LOGIC ---
+  // --- REFACTORED API UPLOAD LOGIC ---
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
+    final apiClient = ref.read(apiClientProvider);
     final userSession = ref.read(userSessionServiceProvider);
-    final String? token = userSession.getToken();
 
     try {
-      // 1. CONVERT DATE FORMAT
-      // Assuming your controller has "DD/MM/YYYY", we must convert it.
-      // If you have a DateTime object from a date picker, use:
-      // String formattedDate = "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
-
-      // For now, let's try to parse what's in your controller:
-      String rawDate = _dobController.text.trim();
-      String formattedDob;
-
-      try {
-        // If the controller is "22/01/2000", this splits and rearranges it to "2000-01-22"
-        List<String> parts = rawDate.split('/');
-        if (parts.length == 3) {
-          formattedDob = "${parts[2]}-${parts[1]}-${parts[0]}";
-        } else {
-          formattedDob = rawDate; // Fallback if already formatted
-        }
-      } catch (e) {
-        formattedDob = rawDate;
+      // 1. Format Date for Backend (YYYY-MM-DD)
+      String? formattedDob;
+      if (_selectedDate != null) {
+        formattedDob = DateFormat('yyyy-MM-dd').format(_selectedDate!);
       }
 
-      // 2. PREPARE DATA
-      FormData formData = FormData.fromMap({
+      // 2. Prepare Multi-part Data
+      Map<String, dynamic> data = {
         "fullName": _nameController.text.trim(),
-        "dob": formattedDob, // MUST be YYYY-MM-DD
-      });
+        if (formattedDob != null) "dob": formattedDob,
+      };
+
+      final formData = FormData.fromMap(data);
 
       if (_imageFile != null) {
         formData.files.add(
           MapEntry(
             "profilePicture",
-            await MultipartFile.fromFile(_imageFile!.path),
+            await MultipartFile.fromFile(
+              _imageFile!.path,
+              filename: "profile_update.jpg",
+            ),
           ),
         );
       }
 
-      // 3. SEND PUT REQUEST
-      final response = await Dio().put(
-        "${ApiEndpoints.baseUrl}auth/update-profile",
+      // 3. Use our global ApiClient (Interceptors handle the token automatically)
+      final response = await apiClient.post(
+        ApiEndpoints.updateProfile,
         data: formData,
-        options: Options(
-          headers: {
-            "Authorization": "Bearer $token",
-            "Accept": "application/json",
-          },
-        ),
       );
 
       if (response.statusCode == 200) {
-        final updatedUser = response.data['data'];
+        // Based on your tests: response.data['user'] or response.data['data']
+        final updatedUser = response.data['user'] ?? response.data['data'];
+
         await userSession.updateProfileDetails(
           fullName: updatedUser['fullName'],
           dob: updatedUser['dob'],
@@ -229,8 +216,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         }
       }
     } on DioException catch (e) {
-      debugPrint("BACKEND ERROR: ${e.response?.data}");
-      // ... error handling logic ...
+      final errorMsg = e.response?.data['message'] ?? "Update failed";
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
+      );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

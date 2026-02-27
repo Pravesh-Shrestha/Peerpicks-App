@@ -6,14 +6,19 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:peerpicks/core/api/api_endpoints.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 
+// Use a provider for SecureStorage to keep it a singleton
+final storageProvider = Provider((ref) => const FlutterSecureStorage());
+
 final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient();
+  final storage = ref.watch(storageProvider);
+  return ApiClient(storage);
 });
 
 class ApiClient {
   late final Dio _dio;
+  final FlutterSecureStorage _storage;
 
-  ApiClient() {
+  ApiClient(this._storage) {
     _dio = Dio(
       BaseOptions(
         baseUrl: ApiEndpoints.baseUrl,
@@ -26,8 +31,8 @@ class ApiClient {
       ),
     );
 
-    // Add Security Interceptor
-    _dio.interceptors.add(_AuthInterceptor());
+    // Add Security Interceptor (Passing storage instance)
+    _dio.interceptors.add(_AuthInterceptor(_storage));
 
     // Auto retry on network failures
     _dio.interceptors.add(
@@ -39,11 +44,16 @@ class ApiClient {
           Duration(seconds: 2),
           Duration(seconds: 3),
         ],
+        // Updated evaluator to handle newer DioException logic
         retryEvaluator: (error, attempt) {
-          return error.type == DioExceptionType.connectionTimeout ||
-              error.type == DioExceptionType.sendTimeout ||
-              error.type == DioExceptionType.receiveTimeout ||
-              error.type == DioExceptionType.connectionError;
+          if (error.type == DioExceptionType.badResponse) {
+            final statusCode = error.response?.statusCode;
+            // Don't retry if the server explicitly rejected the request
+            if (statusCode != null && statusCode >= 400 && statusCode < 500) {
+              return false;
+            }
+          }
+          return error.type != DioExceptionType.cancel;
         },
       ),
     );
@@ -63,7 +73,7 @@ class ApiClient {
 
   Dio get dio => _dio;
 
-  // GET request
+  // Reusable method for all requests to handle common logic/errors
   Future<Response> get(
     String path, {
     Map<String, dynamic>? queryParameters,
@@ -72,7 +82,6 @@ class ApiClient {
     return _dio.get(path, queryParameters: queryParameters, options: options);
   }
 
-  // POST request
   Future<Response> post(
     String path, {
     dynamic data,
@@ -87,37 +96,15 @@ class ApiClient {
     );
   }
 
-  // PUT request
-  Future<Response> put(
-    String path, {
-    dynamic data,
-    Map<String, dynamic>? queryParameters,
-    Options? options,
-  }) async {
-    return _dio.put(
-      path,
-      data: data,
-      queryParameters: queryParameters,
-      options: options,
-    );
+  Future<Response> patch(String path, {dynamic data, Options? options}) async {
+    return _dio.patch(path, data: data, options: options);
   }
 
-  // DELETE request
-  Future<Response> delete(
-    String path, {
-    dynamic data,
-    Map<String, dynamic>? queryParameters,
-    Options? options,
-  }) async {
-    return _dio.delete(
-      path,
-      data: data,
-      queryParameters: queryParameters,
-      options: options,
-    );
+  // Protocol Compliance: Replaced all "purge" logic with "delete" [2026-02-01]
+  Future<Response> delete(String path, {dynamic data, Options? options}) async {
+    return _dio.delete(path, data: data, options: options);
   }
 
-  // Multipart request for file uploads
   Future<Response> uploadFile(
     String path, {
     required FormData formData,
@@ -127,45 +114,46 @@ class ApiClient {
     return _dio.post(
       path,
       data: formData,
-      options: options,
+      options: options?.copyWith(contentType: 'multipart/form-data'),
       onSendProgress: onSendProgress,
     );
   }
 }
 
 class _AuthInterceptor extends Interceptor {
-  final _storage = const FlutterSecureStorage();
+  final FlutterSecureStorage _storage;
   static const String _tokenKey = 'auth_token';
+
+  _AuthInterceptor(this._storage);
 
   @override
   void onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    // Endpoints that don't need a token
-    final publicEndpoints = [ApiEndpoints.login, ApiEndpoints.register];
+    // 1. Check if it's a public endpoint
+    final publicPaths = [ApiEndpoints.login, ApiEndpoints.register];
+    final isPublic = publicPaths.any((path) => options.path.contains(path));
 
-    final isPublicGet =
-        options.method == 'GET' &&
-        publicEndpoints.any((endpoint) => options.path.startsWith(endpoint));
-
-    final isAuthEndpoint =
-        options.path == ApiEndpoints.users ||
-        options.path == ApiEndpoints.login;
-
-    if (!isPublicGet && !isAuthEndpoint) {
+    if (!isPublic) {
       final token = await _storage.read(key: _tokenKey);
-      if (token != null) {
+
+      // Match axios.ts logic: Only attach if token is valid
+      if (token != null && token != "null" && token.isNotEmpty) {
         options.headers['Authorization'] = 'Bearer $token';
       }
     }
+
     handler.next(options);
   }
 
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
+  void onError(DioException err, ErrorInterceptorHandler handler) async {
+    // If we get a 401, the session is expired
     if (err.response?.statusCode == 401) {
-      _storage.delete(key: _tokenKey);
+      debugPrint('Session expired. Clearing token...');
+      await _storage.delete(key: _tokenKey);
+      // Optional: Add logic here to trigger a logout in your StateNotifier
     }
     handler.next(err);
   }

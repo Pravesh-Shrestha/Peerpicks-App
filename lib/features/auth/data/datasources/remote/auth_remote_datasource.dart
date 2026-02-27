@@ -1,4 +1,3 @@
-import 'package:peerpicks/features/auth/domain/entities/auth_entity.dart';
 import 'package:peerpicks/core/api/api_client.dart';
 import 'package:peerpicks/core/api/api_endpoints.dart';
 import 'package:peerpicks/core/services/storage/user_session_service.dart';
@@ -27,7 +26,7 @@ class AuthRemoteDatasource implements IAuthRemoteDataSource {
 
   @override
   Future<AuthApiModel?> getUserById(String authId) async {
-    final response = await _apiClient.get('${ApiEndpoints.users}/$authId');
+    final response = await _apiClient.get('${ApiEndpoints.whoAmI}/$authId');
 
     if (response.statusCode == 200) {
       // Adjusted to handle direct object or 'data' wrapper common in APIs
