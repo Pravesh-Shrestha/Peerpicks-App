@@ -1,19 +1,33 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// SharedPreferences instance provider
+// Providers
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError('SharedPreferences must be overridden in main.dart');
 });
 
-// UserSessionService provider
+final secureStorageProvider = Provider(
+  (ref) => const FlutterSecureStorage(
+    // EncryptedSharedPreferences is better for Android
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  ),
+);
+
 final userSessionServiceProvider = Provider<UserSessionService>((ref) {
-  final prefs = ref.read(sharedPreferencesProvider);
-  return UserSessionService(prefs: prefs);
+  final prefs = ref.watch(sharedPreferencesProvider);
+  final secureStorage = ref.watch(secureStorageProvider);
+  return UserSessionService(prefs: prefs, secureStorage: secureStorage);
 });
 
 class UserSessionService {
   final SharedPreferences _prefs;
+  final FlutterSecureStorage _secureStorage;
+
+  // Stream to allow the app to react to login/logout events automatically
+  final _authStateController = StreamController<bool>.broadcast();
+  Stream<bool> get authStateChanges => _authStateController.stream;
 
   static const String _keyIsLoggedIn = 'is_logged_in';
   static const String _keyUserId = 'user_id';
@@ -22,68 +36,88 @@ class UserSessionService {
   static const String _keyUserPhone = 'user_phone';
   static const String _keyUserProfilePicture = 'user_profile_picture';
   static const String _keyUserDob = 'user_dob';
-  static const String _keyAuthToken = 'auth_token';
+  static const String _tokenKey = 'auth_token';
 
-  UserSessionService({required SharedPreferences prefs}) : _prefs = prefs;
+  UserSessionService({
+    required SharedPreferences prefs,
+    required FlutterSecureStorage secureStorage,
+  }) : _prefs = prefs,
+       _secureStorage = secureStorage;
 
-  // Save the full session (usually called during Login or Register)
+  /// Save full session (Used for AUTH: LOGIN, REGISTER)
   Future<void> saveUserSession({
     required String userId,
     required String email,
     required String fullName,
-    required DateTime dob,
     required String token,
+    dynamic dob,
     String? phone,
     String? profilePicture,
   }) async {
+    // 1. Save sensitive data to SECURE storage
+    await _secureStorage.write(key: _tokenKey, value: token);
+
+    // 2. Save profile data to SharedPreferences
     await _prefs.setBool(_keyIsLoggedIn, true);
     await _prefs.setString(_keyUserId, userId);
     await _prefs.setString(_keyUserEmail, email);
     await _prefs.setString(_keyUserFullName, fullName);
-    await _prefs.setString(_keyAuthToken, token);
-    await _prefs.setString(_keyUserDob, dob.toIso8601String());
+
+    if (phone != null) await _prefs.setString(_keyUserPhone, phone);
+    if (profilePicture != null) {
+      await _prefs.setString(_keyUserProfilePicture, profilePicture);
+    }
+
+    if (dob != null) {
+      final dobStr = dob is DateTime ? dob.toIso8601String() : dob.toString();
+      await _prefs.setString(_keyUserDob, dobStr);
+    }
+
+    _authStateController.add(true);
+  }
+
+  /// Update existing profile (Used for USERS: UPDATEPROFILE)
+  Future<void> updateProfileDetails({
+    required String fullName,
+    required String dob,
+    String? profilePicture,
+    String? phone,
+  }) async {
+    await _prefs.setString(_keyUserFullName, fullName);
+    await _prefs.setString(_keyUserDob, dob);
     if (phone != null) await _prefs.setString(_keyUserPhone, phone);
     if (profilePicture != null) {
       await _prefs.setString(_keyUserProfilePicture, profilePicture);
     }
   }
 
-  // NEW: Update only profile details (called after Edit Profile success)
-  Future<void> updateProfileDetails({
-    required String fullName,
-    required String dob, // Accepting string format from controller
-    String? profilePicture,
-  }) async {
-    await _prefs.setString(_keyUserFullName, fullName);
-    await _prefs.setString(_keyUserDob, dob);
-    if (profilePicture != null) {
-      // This will save the path returned by your backend (e.g., /uploads/image.png)
-      await _prefs.setString(_keyUserProfilePicture, profilePicture);
-    }
-  }
-
   // Getters
   bool isLoggedIn() => _prefs.getBool(_keyIsLoggedIn) ?? false;
-  String? getToken() => _prefs.getString(_keyAuthToken);
+
+  Future<String?> getToken() async => await _secureStorage.read(key: _tokenKey);
+
   String? getCurrentUserId() => _prefs.getString(_keyUserId);
   String? getCurrentUserEmail() => _prefs.getString(_keyUserEmail);
   String? getCurrentUserFullName() => _prefs.getString(_keyUserFullName);
   String? getCurrentUserPhone() => _prefs.getString(_keyUserPhone);
+  String? getCurrentUserProfilePicture() =>
+      _prefs.getString(_keyUserProfilePicture);
 
   DateTime? getCurrentUserDob() {
     final dobStr = _prefs.getString(_keyUserDob);
     if (dobStr == null) return null;
-    try {
-      return DateTime.parse(dobStr);
-    } catch (e) {
-      return null;
-    }
+    return DateTime.tryParse(dobStr);
   }
 
-  String? getCurrentUserProfilePicture() =>
-      _prefs.getString(_keyUserProfilePicture);
-
+  /// Delete session (Protocol Compliance: Clear all storage)
+  /// Replaces "purge" or "clear" to align with project standards.
   Future<void> clearSession() async {
     await _prefs.clear();
+    await _secureStorage.deleteAll();
+    _authStateController.add(false);
+  }
+
+  void dispose() {
+    _authStateController.close();
   }
 }

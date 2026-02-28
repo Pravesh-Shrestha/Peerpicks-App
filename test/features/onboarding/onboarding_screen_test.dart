@@ -9,37 +9,27 @@ import 'package:peerpicks/core/services/storage/user_session_service.dart';
 
 void main() {
   late SharedPreferences sharedPrefs;
-
-  // This runs before every single test
   setUp(() async {
-    // Replaces real SharedPreferences with an in-memory mock
     SharedPreferences.setMockInitialValues({});
     sharedPrefs = await SharedPreferences.getInstance();
   });
-
-  // Helper function to keep tests clean
   Widget createOnboardingScreen() {
     return ProviderScope(
-      overrides: [
-        // Match the override found in your main.dart
-        sharedPreferencesProvider.overrideWithValue(sharedPrefs),
-      ],
+      overrides: [sharedPreferencesProvider.overrideWithValue(sharedPrefs)],
       child: const MaterialApp(home: OnboardingScreen()),
     );
   }
 
   group('OnboardingScreen Widget Tests', () {
-    testWidgets('Should display the first onboarding page on load', (
+    testWidgets('WIDGET-Should display the first onboarding page on load', (
       tester,
     ) async {
       await tester.pumpWidget(createOnboardingScreen());
-
-      // Verify the title of the first item in your contents list
       expect(find.text(contents[0].title), findsOneWidget);
       expect(find.text('Skip'), findsOneWidget);
     });
 
-    testWidgets('Should change content when swiping to the next page', (
+    testWidgets('WIDGET-Should change content when swiping to the next page', (
       tester,
     ) async {
       await tester.pumpWidget(createOnboardingScreen());
@@ -52,7 +42,7 @@ void main() {
       expect(find.text(contents[1].title), findsOneWidget);
     });
 
-    testWidgets('Should navigate to SignInScreen when Skip is tapped', (
+    testWidgets('WIDGET-Should navigate to SignInScreen when Skip is tapped', (
       tester,
     ) async {
       await tester.pumpWidget(createOnboardingScreen());
@@ -73,7 +63,7 @@ void main() {
     });
 
     testWidgets(
-      'Should navigate to SignInScreen after the last page button is pressed',
+      'WIDGET-Should navigate to SignInScreen after the last page button is pressed',
       (tester) async {
         await tester.pumpWidget(createOnboardingScreen());
 

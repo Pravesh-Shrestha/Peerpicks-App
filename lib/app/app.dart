@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peerpicks/core/services/storage/user_session_service.dart';
 import 'package:peerpicks/features/dashboard/presentation/pages/home_screen.dart';
 import 'package:peerpicks/features/onboarding/presentation/pages/onboarding_screen.dart';
-// Ensure this path is correct
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});

@@ -4,10 +4,9 @@ import 'package:peerpicks/features/onboarding/presentation/widgets/onboarding_pa
 import 'package:peerpicks/features/onboarding/data/models/onboarding_model.dart';
 
 void main() {
-  testWidgets('OnboardingPageContent displays title and description', (
+  testWidgets('WIDGET-OnboardingPageContent displays title and description', (
     WidgetTester tester,
   ) async {
-    // Create dummy content based on your OnboardingContent model
     final dummyContent = OnboardingContent(
       title: 'Find Peers',
       description: 'Connect with people around you.',
