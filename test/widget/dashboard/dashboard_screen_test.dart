@@ -18,12 +18,12 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byIcon(Icons.search), findsOneWidget);
-    expect(find.text("Welcome"), findsOneWidget);
-    expect(find.text("Probs"), findsOneWidget);
+    expect(find.byIcon(Icons.search_rounded), findsOneWidget);
+    expect(find.textContaining('Hello'), findsOneWidget);
+    expect(find.text('Discover new places'), findsOneWidget);
 
     // 1. Verify "Popular" Tab is Visible by Default
-    expect(find.text("Most Visited Places"), findsOneWidget);
+    expect(find.text('Trending'), findsOneWidget);
 
     // 2. Tap the "For You" Tab
     await tester.tap(find.text('For You'));
@@ -31,10 +31,10 @@ void main() {
     // TabBarView requires pumpAndSettle to finish the sliding animation
     await tester.pumpAndSettle();
 
-    // 3. Verify "For You" content is now visible
-    expect(find.text("Review Loading..."), findsWidgets);
+    // 3. Verify "For You" content is now visible (ListView feed)
+    expect(find.byType(ListView), findsWidgets);
 
     // 4. Verify "Popular" content is no longer visible (it's off-screen)
-    expect(find.text("Most Visited Places"), findsNothing);
+    expect(find.text('Trending'), findsNothing);
   });
 }

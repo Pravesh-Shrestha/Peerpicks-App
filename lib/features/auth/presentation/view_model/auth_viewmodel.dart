@@ -128,14 +128,15 @@ class AuthViewModel extends Notifier<AuthState> {
         status: AuthStatus.error,
         errorMessage: failure.message,
       ),
-      (success) => state = state.copyWith(
-        status: AuthStatus.unauthenticated,
-        user: null,
-      ),
+      (success) => state = const AuthState(status: AuthStatus.unauthenticated),
     );
   }
 
   void clearError() {
-    state = state.copyWith(errorMessage: null);
+    state = AuthState(
+      status: state.status,
+      user: state.user,
+      errorMessage: null,
+    );
   }
 }
