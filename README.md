@@ -203,7 +203,4 @@ If you adapt or extend this project, mention what was changed from the original 
 
 ---
 
-## License
-
-Add your license information here (for example MIT, Apache-2.0, or private/internal use).
 
