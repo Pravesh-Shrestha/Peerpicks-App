@@ -49,6 +49,7 @@ dependencies:
 
   # Authentication
   flutter_secure_storage: ^10.0.0
+  local_auth: ^2.3.0
   shared_preferences: ^2.5.4
   jwt_decoder: ^2.0.1
   google_sign_in: ^7.2.0
@@ -84,6 +85,10 @@ dependencies:
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
   url_launcher: ^6.3.2
+  sensors_plus: ^6.1.1
+  light: ^5.0.0
+  screen_brightness: ^1.0.1
+  geolocator: ^13.0.1
 
 dev_dependencies:
   flutter_test:

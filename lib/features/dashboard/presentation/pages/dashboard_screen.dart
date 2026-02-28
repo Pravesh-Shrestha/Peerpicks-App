@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -13,6 +17,8 @@ import 'package:peerpicks/features/picks/presentation/view_model/picks_viewmodel
 import 'package:peerpicks/features/social/presentation/view_model/social_viewmodel.dart';
 import 'package:peerpicks/features/dashboard/presentation/pages/search_screen.dart';
 import 'package:peerpicks/features/profile/presentation/pages/user_profile_view_screen.dart';
+import 'package:peerpicks/features/map/presentation/pages/nearby_picks_screen.dart';
+import 'package:peerpicks/core/services/sensors/sensor_settings_provider.dart';
 import 'package:peerpicks/widgets/video_player_widget.dart';
 import 'package:peerpicks/core/services/storage/user_session_service.dart';
 
@@ -23,17 +29,30 @@ class DashboardScreen extends ConsumerStatefulWidget {
   ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+class _DashboardScreenState extends ConsumerState<DashboardScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final ScrollController _feedScrollController = ScrollController();
+  StreamSubscription<AccelerometerEvent>? _accelerometerSub;
+  ProviderSubscription<PicksState>? _picksSubscription;
+  ProviderSubscription<SensorSettingsState>? _sensorSettingsSubscription;
+  DateTime _lastShakeTime = DateTime.fromMillisecondsSinceEpoch(0);
+  DateTime _lastTiltTime = DateTime.fromMillisecondsSinceEpoch(0);
+  bool _isUserScrolling = false;
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     Future.microtask(() {
       ref
           .read(picksViewModelProvider.notifier)
           .getDiscoveryFeed(page: 1, limit: 20);
 
       // Sync voted/favorited state when picks finish loading
-      ref.listenManual(picksViewModelProvider, (prev, next) {
+      _picksSubscription = ref.listenManual(picksViewModelProvider, (
+        prev,
+        next,
+      ) {
         if (next.status == PicksStatus.loaded && next.picks.isNotEmpty) {
           ref
               .read(socialViewModelProvider.notifier)
@@ -41,6 +60,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         }
       });
     });
+
+    _configureMotion(ref.read(sensorSettingsProvider));
+    _sensorSettingsSubscription = ref.listenManual<SensorSettingsState>(
+      sensorSettingsProvider,
+      (prev, next) {
+        if (prev?.shakeToRefreshEnabled != next.shakeToRefreshEnabled ||
+            prev?.tiltToOpenEnabled != next.tiltToOpenEnabled) {
+          _configureMotion(next);
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _picksSubscription?.close();
+    _sensorSettingsSubscription?.close();
+    _accelerometerSub?.cancel();
+    _feedScrollController.dispose();
+    _tabController.dispose();
+    super.dispose();
   }
 
   // --------------- helpers ---------------
@@ -59,6 +99,178 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       if (!_isVideo(url)) return url;
     }
     return null;
+  }
+
+  void _configureMotion(SensorSettingsState settings) {
+    final shouldListen =
+        settings.shakeToRefreshEnabled || settings.tiltToOpenEnabled;
+    if (shouldListen && _accelerometerSub == null) {
+      _accelerometerSub = accelerometerEvents.listen(_handleAccelerometer);
+    } else if (!shouldListen && _accelerometerSub != null) {
+      _accelerometerSub?.cancel();
+      _accelerometerSub = null;
+    }
+  }
+
+  void _handleAccelerometer(AccelerometerEvent event) {
+    if (!mounted) return;
+    final settings = ref.read(sensorSettingsProvider);
+
+    if (settings.shakeToRefreshEnabled) {
+      _checkShake(event);
+    }
+    if (settings.tiltToOpenEnabled) {
+      _checkTiltLeft(event);
+    }
+  }
+
+  void _checkShake(AccelerometerEvent event) {
+    if (_tabController.index != 1) return;
+
+    final gX = event.x / 9.81;
+    final gY = event.y / 9.81;
+    final gZ = event.z / 9.81;
+    final gForce = sqrt((gX * gX) + (gY * gY) + (gZ * gZ));
+    final now = DateTime.now();
+
+    if (gForce > 2.7 &&
+        now.difference(_lastShakeTime) > const Duration(seconds: 3)) {
+      _lastShakeTime = now;
+      _triggerShakeRefresh();
+    }
+  }
+
+  void _checkTiltLeft(AccelerometerEvent event) {
+    if (_tabController.index != 1 || _isUserScrolling) return;
+    final now = DateTime.now();
+    if (now.difference(_lastTiltTime) < const Duration(seconds: 3)) return;
+
+    final isLeftTilt = event.x < -5.0 && event.y.abs() < 6.0;
+    if (!isLeftTilt) return;
+
+    _lastTiltTime = now;
+    _openLatestPick();
+  }
+
+  void _triggerShakeRefresh() {
+    if (!mounted) return;
+    HapticFeedback.mediumImpact();
+    if (_feedScrollController.hasClients) {
+      _feedScrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOut,
+      );
+    }
+    _refreshFeed();
+  }
+
+  Future<void> _refreshFeed() async {
+    await ref
+        .read(picksViewModelProvider.notifier)
+        .getDiscoveryFeed(page: 1, limit: 20);
+  }
+
+  void _openLatestPick() {
+    final picks = ref.read(picksViewModelProvider).picks;
+    if (picks.isEmpty) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PickDetailScreen(pickId: picks.first.id),
+      ),
+    );
+  }
+
+  Widget _buildGestureTipBanner(SensorSettingsState sensorState) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: cs.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: cs.primary.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.sensors_rounded, color: cs.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Shake to refresh. Tilt left to open the latest pick.',
+              style: TextStyle(
+                fontSize: 13,
+                color: cs.onSurface,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: () => ref
+                .read(sensorSettingsProvider.notifier)
+                .setGestureTipsSeen(true),
+            icon: Icon(Icons.close_rounded, color: cs.onSurfaceVariant),
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNearbyPicksCard() {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: cs.outlineVariant),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: cs.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.near_me_rounded, color: cs.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Nearby Picks',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Discover places around your location',
+                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NearbyPicksScreen()),
+              ),
+              child: const Text('View'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Reusable CachedNetworkImage — only call for images, never videos
@@ -296,95 +508,98 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final authState = ref.watch(authViewModelProvider);
     final user = authState.user;
     final picksState = ref.watch(picksViewModelProvider);
+    final sensorState = ref.watch(sensorSettingsProvider);
     final screenWidth = MediaQuery.of(context).size.width;
     final isTablet = screenWidth > 600;
 
     final cs = Theme.of(context).colorScheme;
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          elevation: 0,
-          surfaceTintColor: Colors.transparent,
-          toolbarHeight: 64,
-          automaticallyImplyLeading: false,
-          title: Row(
-            children: [
-              CircleAvatar(
-                radius: isTablet ? 24 : 20,
-                backgroundColor: cs.surfaceContainerHighest,
-                backgroundImage: user?.profilePicture != null
-                    ? CachedNetworkImageProvider(
-                        ApiEndpoints.resolveServerUrl(user!.profilePicture!),
-                      )
-                    : null,
-                child: user?.profilePicture == null
-                    ? Icon(
-                        Icons.person_rounded,
-                        color: cs.onSurfaceVariant,
-                        size: isTablet ? 26 : 22,
-                      )
-                    : null,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Hello, ${user?.fullName.split(' ')[0] ?? 'there'}',
-                      style: TextStyle(
-                        color: cs.onSurface,
-                        fontWeight: FontWeight.w600,
-                        fontSize: isTablet ? 18 : 16,
-                      ),
-                    ),
-                    Text(
-                      'Discover new places',
-                      style: TextStyle(
-                        color: cs.onSurfaceVariant,
-                        fontSize: isTablet ? 13 : 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SearchScreen()),
-                ),
-                icon: Icon(Icons.search_rounded, color: cs.onSurface),
-                style: IconButton.styleFrom(
-                  backgroundColor: cs.surfaceContainerHighest,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          bottom: TabBar(
-            indicatorColor: cs.primary,
-            indicatorWeight: 2.5,
-            indicatorSize: TabBarIndicatorSize.label,
-            labelColor: cs.onSurface,
-            unselectedLabelColor: cs.onSurfaceVariant,
-            labelStyle: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: isTablet ? 16 : 15,
+    return Scaffold(
+      appBar: AppBar(
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        toolbarHeight: 64,
+        automaticallyImplyLeading: false,
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: isTablet ? 24 : 20,
+              backgroundColor: cs.surfaceContainerHighest,
+              backgroundImage: user?.profilePicture != null
+                  ? CachedNetworkImageProvider(
+                      ApiEndpoints.resolveServerUrl(user!.profilePicture!),
+                    )
+                  : null,
+              child: user?.profilePicture == null
+                  ? Icon(
+                      Icons.person_rounded,
+                      color: cs.onSurfaceVariant,
+                      size: isTablet ? 26 : 22,
+                    )
+                  : null,
             ),
-            dividerColor: Colors.transparent,
-            tabs: const [
-              Tab(text: 'Popular'),
-              Tab(text: 'For You'),
-            ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hello, ${user?.fullName.split(' ')[0] ?? 'there'}',
+                    style: TextStyle(
+                      color: cs.onSurface,
+                      fontWeight: FontWeight.w600,
+                      fontSize: isTablet ? 18 : 16,
+                    ),
+                  ),
+                  Text(
+                    'Discover new places',
+                    style: TextStyle(
+                      color: cs.onSurfaceVariant,
+                      fontSize: isTablet ? 13 : 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SearchScreen()),
+              ),
+              icon: Icon(Icons.search_rounded, color: cs.onSurface),
+              style: IconButton.styleFrom(
+                backgroundColor: cs.surfaceContainerHighest,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: cs.primary,
+          indicatorWeight: 2.5,
+          indicatorSize: TabBarIndicatorSize.label,
+          labelColor: cs.onSurface,
+          unselectedLabelColor: cs.onSurfaceVariant,
+          labelStyle: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: isTablet ? 16 : 15,
           ),
+          dividerColor: Colors.transparent,
+          tabs: const [
+            Tab(text: 'Popular'),
+            Tab(text: 'For You'),
+          ],
         ),
-        body: TabBarView(
-          children: [_buildPopularTab(picksState), _buildForYouTab(picksState)],
-        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildPopularTab(picksState),
+          _buildForYouTab(picksState, sensorState),
+        ],
       ),
     );
   }
@@ -397,9 +612,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return RefreshIndicator(
       color: Theme.of(context).colorScheme.primary,
-      onRefresh: () => ref
-          .read(picksViewModelProvider.notifier)
-          .getDiscoveryFeed(page: 1, limit: 20),
+      onRefresh: _refreshFeed,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
@@ -412,6 +625,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               _buildFeaturedCarousel(picksState.picks)
             else
               _buildCarouselSkeleton(),
+            _buildNearbyPicksCard(),
             _sectionHeader('Trending'),
             isLoaded
                 ? _buildHorizontalPicksList(picksState.picks)
@@ -579,7 +793,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -664,7 +880,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -675,28 +893,36 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             Icon(
                               Icons.thumb_up_alt_outlined,
                               size: 12,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(width: 3),
                             Text(
                               '${pick.upvoteCount}',
                               style: TextStyle(
                                 fontSize: 10,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                               ),
                             ),
                             const SizedBox(width: 10),
                             Icon(
                               Icons.chat_bubble_outline,
                               size: 12,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(width: 3),
                             Text(
                               '${pick.commentCount}',
                               style: TextStyle(
                                 fontSize: 10,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -715,7 +941,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   // ==================== FOR YOU TAB ====================
 
-  Widget _buildForYouTab(PicksState picksState) {
+  Widget _buildForYouTab(
+    PicksState picksState,
+    SensorSettingsState sensorState,
+  ) {
     if (picksState.status == PicksStatus.loading ||
         picksState.status == PicksStatus.initial) {
       return ListView.builder(
@@ -731,11 +960,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.wifi_off_rounded, size: 48, color: Theme.of(context).colorScheme.outlineVariant),
+            Icon(
+              Icons.wifi_off_rounded,
+              size: 48,
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
             const SizedBox(height: 12),
             Text(
               picksState.errorMessage ?? 'Something went wrong',
-              style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -760,16 +996,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.explore_outlined, size: 56, color: Theme.of(context).colorScheme.outlineVariant),
+            Icon(
+              Icons.explore_outlined,
+              size: 56,
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
             const SizedBox(height: 12),
             Text(
               'No picks yet',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 16),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 16,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               'Be the first to share a place!',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 13,
+              ),
             ),
           ],
         ),
@@ -778,16 +1024,42 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return RefreshIndicator(
       color: Theme.of(context).colorScheme.primary,
-      onRefresh: () => ref
-          .read(picksViewModelProvider.notifier)
-          .getDiscoveryFeed(page: 1, limit: 20),
-      child: ListView.builder(
-        padding: const EdgeInsets.only(bottom: 100, top: 4),
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
+      onRefresh: _refreshFeed,
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification is ScrollStartNotification) {
+            _isUserScrolling = true;
+          } else if (notification is ScrollEndNotification ||
+              notification is UserScrollNotification) {
+            _isUserScrolling = false;
+          }
+          return false;
+        },
+        child: ListView.builder(
+          controller: _feedScrollController,
+          padding: const EdgeInsets.only(bottom: 100, top: 4),
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          itemCount:
+              picks.length +
+              ((!sensorState.gestureTipsSeen &&
+                      (sensorState.shakeToRefreshEnabled ||
+                          sensorState.tiltToOpenEnabled))
+                  ? 1
+                  : 0),
+          itemBuilder: (context, index) {
+            final showTips =
+                !sensorState.gestureTipsSeen &&
+                (sensorState.shakeToRefreshEnabled ||
+                    sensorState.tiltToOpenEnabled);
+            if (showTips && index == 0) {
+              return _buildGestureTipBanner(sensorState);
+            }
+            final pickIndex = showTips ? index - 1 : index;
+            return _buildFeedCard(picks[pickIndex]);
+          },
         ),
-        itemCount: picks.length,
-        itemBuilder: (context, index) => _buildFeedCard(picks[index]),
       ),
     );
   }
@@ -811,7 +1083,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+            color: Theme.of(
+              context,
+            ).colorScheme.primary.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -820,366 +1094,381 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(18),
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              isTablet ? 20 : 14,
-              12,
-              isTablet ? 20 : 14,
-              8,
-            ),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: () => _navigateToUserProfile(pick),
-                  child: CircleAvatar(
-                    radius: isTablet ? 22 : 18,
-                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    backgroundImage: pick.userProfilePicture != null
-                        ? CachedNetworkImageProvider(
-                            ApiEndpoints.resolveServerUrl(
-                              pick.userProfilePicture!,
-                            ),
-                          )
-                        : null,
-                    child: pick.userProfilePicture == null
-                        ? Text(
-                            (pick.userName ?? pick.alias)
-                                .substring(0, 1)
-                                .toUpperCase(),
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: isTablet ? 16 : 14,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          )
-                        : null,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => _navigateToUserProfile(pick),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          pick.userName ?? 'User',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: isTablet ? 15 : 14,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          _timeAgo(pick.createdAt),
-                          style: TextStyle(
-                            fontSize: isTablet ? 12 : 11,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.star_rounded,
-                        color: Colors.amber,
-                        size: 14,
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        pick.stars.toStringAsFixed(1),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // 3-dot menu for author actions (edit / delete)
-                if (pick.userId ==
-                    ref.read(userSessionServiceProvider).getCurrentUserId())
-                  PopupMenuButton<String>(
-                    icon: Icon(
-                      Icons.more_vert_rounded,
-                      size: 20,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    onSelected: (value) {
-                      if (value == 'delete') {
-                        _showDeleteConfirmation(pick);
-                      } else if (value == 'edit') {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Edit feature coming soon!'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      }
-                    },
-                    itemBuilder: (popupCtx) => [
-                      PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.edit_outlined,
-                              size: 18,
-                              color: Theme.of(popupCtx).colorScheme.onSurface,
-                            ),
-                            const SizedBox(width: 10),
-                            const Text('Edit Pick'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.delete_outline,
-                              size: 18,
-                              color: Colors.red,
-                            ),
-                            SizedBox(width: 10),
-                            Text(
-                              'Delete Pick',
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-
-          // Place name + Location
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              isTablet ? 20 : 14,
-              0,
-              isTablet ? 20 : 14,
-              8,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    pick.alias,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: isTablet ? 17 : 15,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (pick.locationName != null ||
-                    (pick.latitude != 0 && pick.longitude != 0))
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                isTablet ? 20 : 14,
+                12,
+                isTablet ? 20 : 14,
+                8,
+              ),
+              child: Row(
+                children: [
                   GestureDetector(
-                    onTap: () => _openInMap(pick),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.place_outlined,
-                          size: 14,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 2),
-                        ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: isTablet ? 200 : 120,
-                          ),
-                          child: Text(
-                            pick.locationName ?? 'View on map',
+                    onTap: () => _navigateToUserProfile(pick),
+                    child: CircleAvatar(
+                      radius: isTablet ? 22 : 18,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                      backgroundImage: pick.userProfilePicture != null
+                          ? CachedNetworkImageProvider(
+                              ApiEndpoints.resolveServerUrl(
+                                pick.userProfilePicture!,
+                              ),
+                            )
+                          : null,
+                      child: pick.userProfilePicture == null
+                          ? Text(
+                              (pick.userName ?? pick.alias)
+                                  .substring(0, 1)
+                                  .toUpperCase(),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: isTablet ? 16 : 14,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            )
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => _navigateToUserProfile(pick),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            pick.userName ?? 'User',
                             style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
+                              fontSize: isTablet ? 15 : 14,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
+                          Text(
+                            _timeAgo(pick.createdAt),
+                            style: TextStyle(
+                              fontSize: isTablet ? 12 : 11,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.star_rounded,
+                          color: Colors.amber,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          pick.stars.toStringAsFixed(1),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
                       ],
                     ),
                   ),
-              ],
+                  // 3-dot menu for author actions (edit / delete)
+                  if (pick.userId ==
+                      ref.read(userSessionServiceProvider).getCurrentUserId())
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_vert_rounded,
+                        size: 20,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      onSelected: (value) {
+                        if (value == 'delete') {
+                          _showDeleteConfirmation(pick);
+                        } else if (value == 'edit') {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Edit feature coming soon!'),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      },
+                      itemBuilder: (popupCtx) => [
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.edit_outlined,
+                                size: 18,
+                                color: Theme.of(popupCtx).colorScheme.onSurface,
+                              ),
+                              const SizedBox(width: 10),
+                              const Text('Edit Pick'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.delete_outline,
+                                size: 18,
+                                color: Colors.red,
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                'Delete Pick',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ),
-          ),
 
-          // Media section
-          if (hasMedia) _buildMediaSection(pick, mediaHeight),
+            // Place name + Location
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                isTablet ? 20 : 14,
+                0,
+                isTablet ? 20 : 14,
+                8,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      pick.alias,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: isTablet ? 17 : 15,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (pick.locationName != null ||
+                      (pick.latitude != 0 && pick.longitude != 0))
+                    GestureDetector(
+                      onTap: () => _openInMap(pick),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.place_outlined,
+                            size: 14,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 2),
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: isTablet ? 200 : 120,
+                            ),
+                            child: Text(
+                              pick.locationName ?? 'View on map',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
 
-          if (!hasMedia && pick.description.isNotEmpty)
-            GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => PickDetailScreen(pickId: pick.id),
+            // Media section
+            if (hasMedia) _buildMediaSection(pick, mediaHeight),
+
+            if (!hasMedia && pick.description.isNotEmpty)
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PickDetailScreen(pickId: pick.id),
+                  ),
+                ),
+                child: Container(
+                  width: double.infinity,
+                  margin: EdgeInsets.symmetric(horizontal: isTablet ? 20 : 14),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                  ),
+                  child: Text(
+                    pick.description,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.5,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    maxLines: 6,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
-              child: Container(
-                width: double.infinity,
-                margin: EdgeInsets.symmetric(horizontal: isTablet ? 20 : 14),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-                ),
-                child: Text(
-                  pick.description,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.5,
-                    color: Theme.of(context).colorScheme.onSurface,
+
+            // Action bar
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isTablet ? 16 : 10,
+                vertical: 8,
+              ),
+              child: Row(
+                children: [
+                  _socialActionButton(
+                    icon: isLiked
+                        ? Icons.thumb_up_rounded
+                        : Icons.thumb_up_alt_outlined,
+                    label: '${pick.upvoteCount}',
+                    isActive: isLiked,
+                    onTap: () => ref
+                        .read(socialViewModelProvider.notifier)
+                        .toggleVote(pick.id),
                   ),
-                  maxLines: 6,
+                  _socialActionButton(
+                    icon: Icons.chat_bubble_outline_rounded,
+                    label: '${pick.commentCount}',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PickDetailScreen(pickId: pick.id),
+                      ),
+                    ),
+                  ),
+                  _socialActionButton(
+                    icon: Icons.share_outlined,
+                    label: '',
+                    onTap: () => _showShareSheet(pick),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => ref
+                        .read(socialViewModelProvider.notifier)
+                        .toggleFavorite(pick.id),
+                    icon: Icon(
+                      isSaved
+                          ? Icons.bookmark_rounded
+                          : Icons.bookmark_border_rounded,
+                      size: 22,
+                      color: isSaved
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ),
+            ),
+
+            // Description
+            if (hasMedia && pick.description.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  isTablet ? 20 : 14,
+                  0,
+                  isTablet ? 20 : 14,
+                  8,
+                ),
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: '${pick.userName ?? pick.alias}  ',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      TextSpan(
+                        text: pick.description,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ),
 
-          // Action bar
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: isTablet ? 16 : 10,
-              vertical: 8,
-            ),
-            child: Row(
-              children: [
-                _socialActionButton(
-                  icon: isLiked
-                      ? Icons.thumb_up_rounded
-                      : Icons.thumb_up_alt_outlined,
-                  label: '${pick.upvoteCount}',
-                  isActive: isLiked,
-                  onTap: () => ref
-                      .read(socialViewModelProvider.notifier)
-                      .toggleVote(pick.id),
+            if (pick.tags.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  isTablet ? 20 : 14,
+                  0,
+                  isTablet ? 20 : 14,
+                  8,
                 ),
-                _socialActionButton(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  label: '${pick.commentCount}',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PickDetailScreen(pickId: pick.id),
-                    ),
-                  ),
-                ),
-                _socialActionButton(
-                  icon: Icons.share_outlined,
-                  label: '',
-                  onTap: () => _showShareSheet(pick),
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: () => ref
-                      .read(socialViewModelProvider.notifier)
-                      .toggleFavorite(pick.id),
-                  icon: Icon(
-                    isSaved
-                        ? Icons.bookmark_rounded
-                        : Icons.bookmark_border_rounded,
-                    size: 22,
-                    color: isSaved ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
-            ),
-          ),
-
-          // Description
-          if (hasMedia && pick.description.isNotEmpty)
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                isTablet ? 20 : 14,
-                0,
-                isTablet ? 20 : 14,
-                8,
-              ),
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '${pick.userName ?? pick.alias}  ',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    TextSpan(
-                      text: pick.description,
-                      style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-
-          if (pick.tags.isNotEmpty)
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                isTablet ? 20 : 14,
-                0,
-                isTablet ? 20 : 14,
-                8,
-              ),
-              child: Wrap(
-                spacing: 6,
-                children: pick.tags
-                    .take(4)
-                    .map(
-                      (tag) => Text(
-                        '#$tag',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w500,
+                child: Wrap(
+                  spacing: 6,
+                  children: pick.tags
+                      .take(4)
+                      .map(
+                        (tag) => Text(
+                          '#$tag',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                    )
-                    .toList(),
+                      )
+                      .toList(),
+                ),
               ),
-            ),
 
-          Container(height: 6, color: Colors.transparent),
-        ],
-      ),
+            Container(height: 6, color: Colors.transparent),
+          ],
+        ),
       ),
     );
   }
@@ -1334,14 +1623,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
           ),
           child: Column(
             children: [
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(14),
                     ),
@@ -1353,9 +1646,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(height: 10, width: 100, color: Theme.of(context).colorScheme.surfaceContainerHighest),
+                    Container(
+                      height: 10,
+                      width: 100,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                    ),
                     const SizedBox(height: 6),
-                    Container(height: 8, width: 60, color: Theme.of(context).colorScheme.surfaceContainerHighest),
+                    Container(
+                      height: 8,
+                      width: 60,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                    ),
                   ],
                 ),
               ),
@@ -1377,14 +1682,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Row(
               children: [
-                CircleAvatar(backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest, radius: 18),
+                CircleAvatar(
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest,
+                  radius: 18,
+                ),
                 const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(height: 10, width: 100, color: Theme.of(context).colorScheme.surfaceContainerHighest),
+                    Container(
+                      height: 10,
+                      width: 100,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                    ),
                     const SizedBox(height: 4),
-                    Container(height: 8, width: 60, color: Theme.of(context).colorScheme.surfaceContainerHighest),
+                    Container(
+                      height: 8,
+                      width: 60,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                    ),
                   ],
                 ),
               ],
@@ -1401,9 +1723,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Row(
               children: [
-                Container(height: 12, width: 80, color: Theme.of(context).colorScheme.surfaceContainerHighest),
+                Container(
+                  height: 12,
+                  width: 80,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                ),
                 const SizedBox(width: 16),
-                Container(height: 12, width: 60, color: Theme.of(context).colorScheme.surfaceContainerHighest),
+                Container(
+                  height: 12,
+                  width: 60,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                ),
               ],
             ),
           ),

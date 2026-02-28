@@ -26,6 +26,7 @@ class PickDetailScreen extends ConsumerStatefulWidget {
 
 class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
   final _commentController = TextEditingController();
+  ProviderSubscription? _pickSubscription;
 
   @override
   void initState() {
@@ -37,11 +38,14 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
           .getPickDiscussion(widget.pickId);
 
       // Sync voted state when the pick loads
-      ref.listenManual(picksViewModelProvider, (prev, next) {
+      _pickSubscription = ref.listenManual(picksViewModelProvider, (
+        prev,
+        next,
+      ) {
         if (next.selectedPick != null && next.selectedPick!.hasUpvoted) {
-          ref
-              .read(socialViewModelProvider.notifier)
-              .syncVotedFromPicks([next.selectedPick!]);
+          ref.read(socialViewModelProvider.notifier).syncVotedFromPicks([
+            next.selectedPick!,
+          ]);
         }
       });
     });
@@ -49,6 +53,7 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
 
   @override
   void dispose() {
+    _pickSubscription?.close();
     _commentController.dispose();
     super.dispose();
   }
@@ -114,97 +119,97 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
       builder: (ctx) {
         final sheetCs = Theme.of(ctx).colorScheme;
         return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: sheetCs.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: sheetCs.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Share this pick',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: sheetCs.onSurface,
+                const SizedBox(height: 20),
+                Text(
+                  'Share this pick',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: sheetCs.onSurface,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildShareOption(
-                    icon: Icons.copy_rounded,
-                    label: 'Copy Link',
-                    color: sheetCs.primary,
-                    onTap: () {
-                      Clipboard.setData(ClipboardData(text: text));
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Copied to clipboard!'),
-                          duration: Duration(seconds: 2),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
-                  ),
-                  _buildShareOption(
-                    icon: Icons.message_rounded,
-                    label: 'Message',
-                    color: const Color(0xFF2196F3),
-                    onTap: () async {
-                      Navigator.pop(ctx);
-                      final smsUrl = Uri.parse(
-                        'sms:?body=${Uri.encodeComponent(text)}',
-                      );
-                      if (await canLaunchUrl(smsUrl)) {
-                        await launchUrl(smsUrl);
-                      }
-                    },
-                  ),
-                  _buildShareOption(
-                    icon: Icons.email_rounded,
-                    label: 'Email',
-                    color: const Color(0xFFFF5722),
-                    onTap: () async {
-                      Navigator.pop(ctx);
-                      final emailUrl = Uri.parse(
-                        'mailto:?subject=${Uri.encodeComponent('Check this out on PeerPicks!')}&body=${Uri.encodeComponent(text)}',
-                      );
-                      if (await canLaunchUrl(emailUrl)) {
-                        await launchUrl(emailUrl);
-                      }
-                    },
-                  ),
-                  _buildShareOption(
-                    icon: Icons.open_in_browser_rounded,
-                    label: 'More',
-                    color: Colors.grey[700]!,
-                    onTap: () {
-                      Clipboard.setData(ClipboardData(text: text));
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Copied to clipboard!'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildShareOption(
+                      icon: Icons.copy_rounded,
+                      label: 'Copy Link',
+                      color: sheetCs.primary,
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: text));
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Copied to clipboard!'),
+                            duration: Duration(seconds: 2),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                    ),
+                    _buildShareOption(
+                      icon: Icons.message_rounded,
+                      label: 'Message',
+                      color: const Color(0xFF2196F3),
+                      onTap: () async {
+                        Navigator.pop(ctx);
+                        final smsUrl = Uri.parse(
+                          'sms:?body=${Uri.encodeComponent(text)}',
+                        );
+                        if (await canLaunchUrl(smsUrl)) {
+                          await launchUrl(smsUrl);
+                        }
+                      },
+                    ),
+                    _buildShareOption(
+                      icon: Icons.email_rounded,
+                      label: 'Email',
+                      color: const Color(0xFFFF5722),
+                      onTap: () async {
+                        Navigator.pop(ctx);
+                        final emailUrl = Uri.parse(
+                          'mailto:?subject=${Uri.encodeComponent('Check this out on PeerPicks!')}&body=${Uri.encodeComponent(text)}',
+                        );
+                        if (await canLaunchUrl(emailUrl)) {
+                          await launchUrl(emailUrl);
+                        }
+                      },
+                    ),
+                    _buildShareOption(
+                      icon: Icons.open_in_browser_rounded,
+                      label: 'More',
+                      color: Colors.grey[700]!,
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: text));
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Copied to clipboard!'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      );
+        );
       },
     );
   }
@@ -255,9 +260,7 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
 
     return Scaffold(
       body: pick == null
-          ? Center(
-              child: CircularProgressIndicator(color: cs.primary),
-            )
+          ? Center(child: CircularProgressIndicator(color: cs.primary))
           : CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [
@@ -410,9 +413,7 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
               placeholder: (_, url) => Container(
                 color: Colors.grey[200],
                 child: const Center(
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                  ),
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               ),
               errorWidget: (_, url, error) => Container(
@@ -666,7 +667,11 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
     );
   }
 
-  Widget _buildEngagementBar(PickEntity pick, SocialState socialState, ColorScheme cs) {
+  Widget _buildEngagementBar(
+    PickEntity pick,
+    SocialState socialState,
+    ColorScheme cs,
+  ) {
     final isVoted = socialState.votedPickIds.contains(pick.id);
     final isFavorited = socialState.favoritedPickIds.contains(pick.id);
 
@@ -736,10 +741,7 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
         ),
         const SizedBox(width: 8),
         Container(
-          decoration: BoxDecoration(
-            color: cs.primary,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle),
           child: IconButton(
             icon: Icon(Icons.send, color: cs.onPrimary, size: 20),
             onPressed: () async {
@@ -912,7 +914,11 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
                           value: 'edit',
                           child: Row(
                             children: [
-                              Icon(Icons.edit_outlined, size: 18, color: Colors.black87),
+                              Icon(
+                                Icons.edit_outlined,
+                                size: 18,
+                                color: Colors.black87,
+                              ),
                               SizedBox(width: 10),
                               Text('Edit'),
                             ],
@@ -922,9 +928,16 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
                           value: 'delete',
                           child: Row(
                             children: [
-                              Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                              Icon(
+                                Icons.delete_outline,
+                                size: 18,
+                                color: Colors.red,
+                              ),
                               SizedBox(width: 10),
-                              Text('Delete', style: TextStyle(color: Colors.red)),
+                              Text(
+                                'Delete',
+                                style: TextStyle(color: Colors.red),
+                              ),
                             ],
                           ),
                         ),
@@ -947,6 +960,7 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
       }).toList(),
     );
   }
+
   void _showEditCommentDialog(CommentEntity comment) {
     final editController = TextEditingController(text: comment.content);
     final cs = Theme.of(context).colorScheme;
@@ -988,10 +1002,9 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
                 return;
               }
               Navigator.pop(ctx);
-              ref.read(socialViewModelProvider.notifier).updateComment(
-                    commentId: comment.id,
-                    content: newContent,
-                  );
+              ref
+                  .read(socialViewModelProvider.notifier)
+                  .updateComment(commentId: comment.id, content: newContent);
               // Re-fetch to get updated list
               ref
                   .read(socialViewModelProvider.notifier)
@@ -1005,9 +1018,7 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
             },
             child: const Text(
               'Save',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -1032,7 +1043,9 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              ref.read(socialViewModelProvider.notifier).deleteComment(comment.id);
+              ref
+                  .read(socialViewModelProvider.notifier)
+                  .deleteComment(comment.id);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Comment deleted'),
@@ -1151,9 +1164,7 @@ class _DetailMediaSliderState extends State<_DetailMediaSlider> {
                     placeholder: (_, url) => Container(
                       color: Colors.grey[200],
                       child: const Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                        ),
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     ),
                     errorWidget: (_, url, error) => Container(

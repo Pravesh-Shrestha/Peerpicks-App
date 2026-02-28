@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:peerpicks/core/api/api_endpoints.dart';
 import 'package:peerpicks/features/map/presentation/state/nearby_state.dart';
 import 'package:peerpicks/features/map/presentation/view_model/nearby_viewmodel.dart';
@@ -14,15 +15,58 @@ class NearbyPicksScreen extends ConsumerStatefulWidget {
 }
 
 class _NearbyPicksScreenState extends ConsumerState<NearbyPicksScreen> {
+  bool _isLocating = false;
+
   @override
   void initState() {
     super.initState();
-    // Default to Kathmandu coordinates — replace with actual geolocation
-    Future.microtask(() {
-      ref
-          .read(nearbyViewModelProvider.notifier)
-          .getNearbyPicks(lat: 27.7172, lng: 85.3240, radius: 10000);
-    });
+    Future.microtask(_loadNearbyPicks);
+  }
+
+  Future<void> _loadNearbyPicks() async {
+    if (_isLocating) return;
+    setState(() => _isLocating = true);
+
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Location permission is required for nearby picks.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      await ref.read(nearbyViewModelProvider.notifier).getNearbyPicks(
+            lat: position.latitude,
+            lng: position.longitude,
+            radius: 10000,
+          );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Unable to get location: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLocating = false);
+    }
   }
 
   @override
@@ -48,14 +92,7 @@ class _NearbyPicksScreenState extends ConsumerState<NearbyPicksScreen> {
         actions: [
           IconButton(
             icon: Icon(Icons.refresh, color: cs.onSurface),
-            onPressed: () {
-              ref
-                  .read(nearbyViewModelProvider.notifier)
-                  .getNearbyPicks(
-                    lat: nearbyState.currentLat ?? 27.7172,
-                    lng: nearbyState.currentLng ?? 85.3240,
-                  );
-            },
+            onPressed: _loadNearbyPicks,
           ),
         ],
       ),

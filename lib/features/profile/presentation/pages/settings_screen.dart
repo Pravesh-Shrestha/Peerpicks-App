@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peerpicks/app/theme/app_theme_provider.dart';
+import 'package:peerpicks/core/services/storage/user_session_service.dart';
 import 'package:peerpicks/app/theme/app_themes.dart';
+import 'package:peerpicks/core/services/sensors/sensor_settings_provider.dart';
+import 'package:screen_brightness/screen_brightness.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -9,6 +12,8 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeState = ref.watch(appThemeProvider);
+    final sensorState = ref.watch(sensorSettingsProvider);
+    final biometricEnabled = ref.watch(biometricLoginEnabledProvider);
     final meta = AppThemes.paletteMeta[themeState.palette]!;
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -49,6 +54,17 @@ class SettingsScreen extends ConsumerWidget {
             title: 'Password & Security',
             subtitle: 'Change password, two-factor auth',
             onTap: () {},
+          ),
+          _SwitchTile(
+            icon: Icons.fingerprint_rounded,
+            title: 'Biometric Sign-In',
+            subtitle: 'Use Face ID or fingerprint when credentials are saved',
+            value: biometricEnabled,
+            onChanged: (value) async {
+              await ref
+                  .read(biometricLoginEnabledProvider.notifier)
+                  .setEnabled(value);
+            },
           ),
           _SettingsTile(
             icon: Icons.email_outlined,
@@ -94,8 +110,10 @@ class SettingsScreen extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: cs.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -126,6 +144,55 @@ class SettingsScreen extends ConsumerWidget {
             title: 'Language',
             subtitle: 'English',
             onTap: () {},
+          ),
+          const Divider(height: 1),
+
+          // ── Smart & Sensors ──
+          _SectionHeader(title: 'Smart & Sensors'),
+          _SwitchTile(
+            icon: Icons.sensors_rounded,
+            title: 'Shake to Refresh',
+            subtitle: 'Shake the phone to refresh the feed',
+            value: sensorState.shakeToRefreshEnabled,
+            onChanged: (value) {
+              ref
+                  .read(sensorSettingsProvider.notifier)
+                  .setShakeToRefreshEnabled(value);
+            },
+          ),
+          _SwitchTile(
+            icon: Icons.screen_rotation_alt_rounded,
+            title: 'Tilt to Open Pick',
+            subtitle: 'Tilt left to open the latest pick',
+            value: sensorState.tiltToOpenEnabled,
+            onChanged: (value) {
+              ref
+                  .read(sensorSettingsProvider.notifier)
+                  .setTiltToOpenEnabled(value);
+            },
+          ),
+          _SwitchTile(
+            icon: Icons.brightness_auto_rounded,
+            title: 'Auto Theme by Light',
+            subtitle: 'Switch light or dark based on ambient light',
+            value: sensorState.autoThemeByLightEnabled,
+            onChanged: (value) {
+              ref
+                  .read(sensorSettingsProvider.notifier)
+                  .setAutoThemeByLightEnabled(value);
+            },
+          ),
+          _BrightnessTile(
+            value: sensorState.brightness ?? 0.65,
+            isCustom: sensorState.brightness != null,
+            onChanged: (value) {
+              ScreenBrightness().setScreenBrightness(value);
+              ref.read(sensorSettingsProvider.notifier).setBrightness(value);
+            },
+            onReset: () {
+              ScreenBrightness().resetScreenBrightness();
+              ref.read(sensorSettingsProvider.notifier).clearBrightness();
+            },
           ),
           const Divider(height: 1),
 
@@ -301,11 +368,7 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   // ── Mode Picker ─────────────────────────────────────────────
-  void _showModeSheet(
-    BuildContext context,
-    WidgetRef ref,
-    ThemeMode current,
-  ) {
+  void _showModeSheet(BuildContext context, WidgetRef ref, ThemeMode current) {
     showModalBottomSheet(
       context: context,
       builder: (ctx) {
@@ -469,13 +532,11 @@ class _SettingsTile extends StatelessWidget {
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(
-          fontSize: 12,
-          color: cs.onSurface.withOpacity(0.45),
-        ),
+        style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.45)),
       ),
       trailing:
-          trailing ?? Icon(Icons.chevron_right, color: cs.onSurface.withOpacity(0.3)),
+          trailing ??
+          Icon(Icons.chevron_right, color: cs.onSurface.withOpacity(0.3)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
     );
   }
@@ -516,10 +577,7 @@ class _SwitchTile extends StatelessWidget {
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(
-          fontSize: 12,
-          color: cs.onSurface.withOpacity(0.45),
-        ),
+        style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.45)),
       ),
       trailing: Switch.adaptive(
         value: value,
@@ -527,6 +585,90 @@ class _SwitchTile extends StatelessWidget {
         activeColor: cs.primary,
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+    );
+  }
+}
+
+// ─── Brightness Tile ────────────────────────────────────────
+class _BrightnessTile extends StatelessWidget {
+  final double value;
+  final bool isCustom;
+  final ValueChanged<double> onChanged;
+  final VoidCallback onReset;
+
+  const _BrightnessTile({
+    required this.value,
+    required this.isCustom,
+    required this.onChanged,
+    required this.onReset,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final percent = (value * 100).round();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 6, 20, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: cs.primary.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.brightness_medium_rounded,
+                  size: 20,
+                  color: cs.onSurface.withOpacity(0.8),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Screen Brightness',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isCustom ? 'Custom $percent%' : 'System default',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: cs.onSurface.withOpacity(0.45),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: isCustom ? onReset : null,
+                child: const Text('Reset'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Slider(
+            value: value.clamp(0.2, 1.0),
+            min: 0.2,
+            max: 1.0,
+            divisions: 8,
+            activeColor: cs.primary,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -576,14 +718,9 @@ class _PaletteOptionTile extends StatelessWidget {
       ),
       subtitle: Text(
         meta.description,
-        style: TextStyle(
-          fontSize: 12,
-          color: cs.onSurface.withOpacity(0.45),
-        ),
+        style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.45)),
       ),
-      trailing: selected
-          ? Icon(Icons.check_circle, color: cs.primary)
-          : null,
+      trailing: selected ? Icon(Icons.check_circle, color: cs.primary) : null,
     );
   }
 }
@@ -614,9 +751,7 @@ class _ModeOptionTile extends StatelessWidget {
           fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
         ),
       ),
-      trailing: selected
-          ? Icon(Icons.check_circle, color: accentColor)
-          : null,
+      trailing: selected ? Icon(Icons.check_circle, color: accentColor) : null,
       onTap: onTap,
     );
   }
