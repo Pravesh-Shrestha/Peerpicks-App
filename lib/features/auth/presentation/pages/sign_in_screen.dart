@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peerpicks/app/routes/app_routes.dart';
 import 'package:peerpicks/common/app_colors.dart';
 import 'package:peerpicks/core/utils/mysnackbar.dart';
+import 'package:peerpicks/features/auth/presentation/pages/forgot_password_screen.dart';
 import 'package:peerpicks/features/auth/presentation/pages/sign_up_screen.dart';
 import 'package:peerpicks/features/auth/presentation/state/auth_state.dart';
 import 'package:peerpicks/features/auth/presentation/view_model/auth_viewmodel.dart';
@@ -91,8 +92,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final authState = ref.watch(authViewModelProvider);
     final bool isLoading = authState.status == AuthStatus.loading;
 
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -153,7 +155,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   alignment: Alignment.centerRight,
                   child: InkWell(
                     onTap: () {
-                      // Add forgot password navigation here
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ForgotPasswordScreen(),
+                        ),
+                      );
                     },
                     child: Text(
                       "Forgot password?",
@@ -167,23 +174,24 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 ),
                 const SizedBox(height: 40),
                 buildActionButton(
+                  context: context,
                   text: isLoading ? "PLEASE WAIT..." : "SIGN IN",
                   onTap: isLoading ? () {} : _submitForm,
-                  color: Colors.black,
+                  color: cs.onSurface,
                 ),
                 const SizedBox(height: 18),
                 Center(
                   child: GestureDetector(
                     onTap: isLoading ? null : _navigateToSignUp,
-                    child: const Text.rich(
+                    child: Text.rich(
                       TextSpan(
-                        style: TextStyle(fontSize: 14, color: Colors.grey),
+                        style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
                         children: [
-                          TextSpan(text: "Don’t have an account? "),
+                          const TextSpan(text: "Don't have an account? "),
                           TextSpan(
                             text: "Sign up.",
                             style: TextStyle(
-                              color: AppColors.primaryGreen,
+                              color: cs.primary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -193,7 +201,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   ),
                 ),
                 const SizedBox(height: 60),
-                buildSocialRow(),
+                buildSocialRow(context: context),
                 const SizedBox(height: 30),
               ],
             ),

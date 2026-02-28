@@ -14,6 +14,7 @@ class OnboardingPageContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final mediaQuery = MediaQuery.of(context);
     final orientation = mediaQuery.orientation;
     final isLandscape = orientation == Orientation.landscape;
@@ -65,7 +66,7 @@ class OnboardingPageContent extends StatelessWidget {
             content.title,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppColors.indicatorActive,
+              color: cs.primary,
               fontSize: titleSize, // Responsive title size
               fontWeight: FontWeight.w900,
               height: 1.2,
@@ -76,7 +77,7 @@ class OnboardingPageContent extends StatelessWidget {
             content.description,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppColors.lightText,
+              color: cs.onSurfaceVariant,
               fontSize: descriptionSize, // Responsive description size
               height: 1.4,
             ),

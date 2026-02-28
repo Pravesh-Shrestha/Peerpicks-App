@@ -83,6 +83,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authViewModelProvider);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
 
     ref.listen<AuthState>(authViewModelProvider, (previous, next) {
       if (next.status == AuthStatus.registered) {
@@ -97,7 +98,6 @@ class _SignupPageState extends ConsumerState<SignupPage> {
     });
 
     return Scaffold(
-      backgroundColor: isDarkMode ? Colors.grey[900] : Colors.grey[50],
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -118,7 +118,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
           child: IconButton(
             icon: Icon(
               Icons.arrow_back_ios_new,
-              color: isDarkMode ? Colors.white : Colors.black87,
+              color: cs.onSurface,
               size: 20,
             ),
             onPressed: () => Navigator.pop(context),
@@ -144,7 +144,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : Colors.black87,
+                        color: cs.onSurface,
                         letterSpacing: -0.5,
                       ),
                     ),
@@ -153,7 +153,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                       'Fill in your details to get started',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.grey[600],
+                        color: cs.onSurfaceVariant,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -217,7 +217,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                           ],
                         ),
                         child: DropdownButtonFormField<String>(
-                          value: _selectedGender,
+                          initialValue: _selectedGender,
                           decoration: InputDecoration(
                             labelText: 'Gender',
                             labelStyle: TextStyle(
@@ -457,14 +457,14 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                   children: [
                     Text(
                       'Already have an account? ',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
                     ),
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
                       child: Text(
                         'Sign In',
                         style: TextStyle(
-                          color: AppColors.primaryGreen,
+                          color: cs.primary,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),

@@ -8,13 +8,14 @@ class LogoutDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: const Color.fromARGB(255, 255, 255, 255),
+          color: cs.surface,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -58,7 +59,7 @@ class LogoutDialog extends StatelessWidget {
             Text(
               'Are you sure you want to logout?\nYour data will be saved.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.black, height: 1.5),
+              style: TextStyle(fontSize: 14, color: cs.onSurface, height: 1.5),
             ),
             const SizedBox(height: AppSpacing.xl),
 
@@ -70,7 +71,7 @@ class LogoutDialog extends StatelessWidget {
                     onPressed: () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: const BorderSide(color: AppColors.white),
+                      side: BorderSide(color: cs.outlineVariant),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
