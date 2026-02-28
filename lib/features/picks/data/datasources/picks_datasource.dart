@@ -20,6 +20,12 @@ abstract interface class IPicksDataSource {
   });
 
   Future<PickModel?> getPickById(String id);
+  Future<PickModel> updatePick({
+    required String id,
+    required String alias,
+    required String description,
+    required double stars,
+  });
   Future<bool> deletePick(String id);
   Future<List<PickModel>> getPicksByCategory(String category, {int page = 1});
   Future<List<PickModel>> getUserPicks(String userId);

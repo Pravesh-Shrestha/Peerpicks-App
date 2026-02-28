@@ -8,7 +8,6 @@ import 'package:peerpicks/core/api/api_client.dart';
 import 'package:peerpicks/core/api/api_endpoints.dart';
 import 'package:peerpicks/core/services/storage/user_session_service.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:peerpicks/common/app_colors.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -79,10 +78,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               ),
             ),
             ListTile(
-              leading: Icon(
-                Icons.camera_alt_rounded,
-                color: cs.primary,
-              ),
+              leading: Icon(Icons.camera_alt_rounded, color: cs.primary),
               title: const Text('Take a Photo'),
               onTap: () {
                 Navigator.pop(context);
@@ -90,10 +86,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               },
             ),
             ListTile(
-              leading: Icon(
-                Icons.photo_library_rounded,
-                color: cs.primary,
-              ),
+              leading: Icon(Icons.photo_library_rounded, color: cs.primary),
               title: const Text('Choose from Gallery'),
               onTap: () {
                 Navigator.pop(context);
@@ -143,17 +136,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ],
       ),
     );
-  }
-
-  void _handleLogout() async {
-    await ref.read(userSessionServiceProvider).clearSession();
-    if (mounted) {
-      // Navigate to Login Screen and clear navigation stack
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Session expired. Please login again.")),
-      );
-    }
   }
 
   // --- REFACTORED API UPLOAD LOGIC ---
@@ -241,10 +223,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ),
         title: Text(
           'Edit Profile',
-          style: TextStyle(
-            color: cs.onSurface,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -329,11 +308,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   color: cs.onSurface,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  Icons.camera_alt,
-                  color: cs.surface,
-                  size: 20,
-                ),
+                child: Icon(Icons.camera_alt, color: cs.surface, size: 20),
               ),
             ),
           ),
@@ -411,10 +386,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: cs.surface,
-                prefixIcon: Icon(
-                  Icons.calendar_today,
-                  color: cs.primary,
-                ),
+                prefixIcon: Icon(Icons.calendar_today, color: cs.primary),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,

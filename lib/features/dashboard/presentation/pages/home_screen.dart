@@ -69,10 +69,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
-              colors: [
-                const Color(0xFF75A638),
-                const Color(0xFF75A638),
-              ],
+              colors: [const Color(0xFF75A638), const Color(0xFF75A638)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -216,7 +213,6 @@ class _ModernNavIconState extends State<_ModernNavIcon>
   @override
   Widget build(BuildContext context) {
     final bool isActive = widget.index == widget.selectedIndex;
-    final cs = Theme.of(context).colorScheme;
 
     return GestureDetector(
       onTap: widget.onTap,

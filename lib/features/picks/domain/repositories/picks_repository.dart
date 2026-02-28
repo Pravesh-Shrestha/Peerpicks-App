@@ -22,6 +22,12 @@ abstract interface class IPicksRepository {
   });
 
   Future<Either<Failure, PickEntity>> getPickById(String id);
+  Future<Either<Failure, PickEntity>> updatePick({
+    required String id,
+    required String alias,
+    required String description,
+    required double stars,
+  });
   Future<Either<Failure, bool>> deletePick(String id);
   Future<Either<Failure, List<PickEntity>>> getPicksByCategory(
     String category, {
@@ -29,7 +35,8 @@ abstract interface class IPicksRepository {
   });
   Future<Either<Failure, List<PickEntity>>> getUserPicks(String userId);
   Future<Either<Failure, Map<String, dynamic>>> getUserProfileWithPicks(
-      String userId);
+    String userId,
+  );
   Future<Either<Failure, List<PickEntity>>> searchPicks({
     required String query,
     int page = 1,

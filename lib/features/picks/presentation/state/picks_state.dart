@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:peerpicks/features/picks/domain/entities/pick_entity.dart';
 
-enum PicksStatus { initial, loading, loaded, error, created, deleted }
+enum PicksStatus { initial, loading, loaded, error, created, updated, deleted }
 
 class PicksState extends Equatable {
   final PicksStatus status;
@@ -37,6 +37,11 @@ class PicksState extends Equatable {
   }
 
   @override
-  List<Object?> get props =>
-      [status, picks, selectedPick, errorMessage, viewedUserProfile];
+  List<Object?> get props => [
+    status,
+    picks,
+    selectedPick,
+    errorMessage,
+    viewedUserProfile,
+  ];
 }

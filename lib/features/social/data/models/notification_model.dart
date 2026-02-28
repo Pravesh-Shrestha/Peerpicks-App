@@ -10,6 +10,7 @@ class NotificationModel extends NotificationEntity {
     required super.type,
     super.status,
     super.pickId,
+    super.about,
     required super.message,
     super.read,
     required super.createdAt,
@@ -40,6 +41,11 @@ class NotificationModel extends NotificationEntity {
       type: _parseType(json['type']),
       status: json['status'] ?? 'info',
       pickId: json['pickId'] is Map ? json['pickId']['_id'] : json['pickId'],
+      about:
+          json['about'] ??
+          (json['pickId'] is Map
+              ? (json['pickId']['alias'] ?? json['pickId']['description'])
+              : null),
       message: json['message'] ?? _fallbackMessage(json['type']),
       read: json['read'] ?? false,
       createdAt: json['createdAt'] != null
@@ -94,6 +100,7 @@ class NotificationModel extends NotificationEntity {
       type: type,
       status: status,
       pickId: pickId,
+      about: about,
       message: message,
       read: read,
       createdAt: createdAt,

@@ -10,6 +10,8 @@ final socialViewModelProvider = NotifierProvider<SocialViewModel, SocialState>(
 
 class SocialViewModel extends Notifier<SocialState> {
   late final ISocialRepository _socialRepository;
+  final Set<String> _voteInFlight = <String>{};
+  final Set<String> _followInFlight = <String>{};
 
   @override
   SocialState build() {
@@ -34,6 +36,11 @@ class SocialViewModel extends Notifier<SocialState> {
 
   // ============ VOTING ============
   Future<void> toggleVote(String pickId) async {
+    if (_voteInFlight.contains(pickId)) {
+      return;
+    }
+    _voteInFlight.add(pickId);
+
     // Optimistic update
     final currentVoted = Set<String>.from(state.votedPickIds);
     if (currentVoted.contains(pickId)) {
@@ -44,28 +51,33 @@ class SocialViewModel extends Notifier<SocialState> {
     state = state.copyWith(votedPickIds: currentVoted);
 
     final result = await _socialRepository.toggleVote(pickId);
-    result.fold((failure) {
-      // Rollback
-      final rollback = Set<String>.from(state.votedPickIds);
-      if (rollback.contains(pickId)) {
-        rollback.remove(pickId);
-      } else {
-        rollback.add(pickId);
-      }
-      state = state.copyWith(
-        votedPickIds: rollback,
-        errorMessage: failure.message,
-      );
-    }, (isUpvoted) {
-      // Sync with server truth
-      final synced = Set<String>.from(state.votedPickIds);
-      if (isUpvoted) {
-        synced.add(pickId);
-      } else {
-        synced.remove(pickId);
-      }
-      state = state.copyWith(votedPickIds: synced);
-    });
+    result.fold(
+      (failure) {
+        // Rollback
+        final rollback = Set<String>.from(state.votedPickIds);
+        if (rollback.contains(pickId)) {
+          rollback.remove(pickId);
+        } else {
+          rollback.add(pickId);
+        }
+        state = state.copyWith(
+          votedPickIds: rollback,
+          errorMessage: failure.message,
+        );
+        _voteInFlight.remove(pickId);
+      },
+      (isUpvoted) {
+        // Sync with server truth
+        final synced = Set<String>.from(state.votedPickIds);
+        if (isUpvoted) {
+          synced.add(pickId);
+        } else {
+          synced.remove(pickId);
+        }
+        state = state.copyWith(votedPickIds: synced);
+        _voteInFlight.remove(pickId);
+      },
+    );
   }
 
   /// Sync follow state from a user-profile server response
@@ -84,6 +96,11 @@ class SocialViewModel extends Notifier<SocialState> {
 
   // ============ FOLLOW ============
   Future<void> toggleFollow(String targetUserId) async {
+    if (_followInFlight.contains(targetUserId)) {
+      return;
+    }
+    _followInFlight.add(targetUserId);
+
     final currentFollowed = Set<String>.from(state.followedUserIds);
     if (currentFollowed.contains(targetUserId)) {
       currentFollowed.remove(targetUserId);
@@ -105,6 +122,7 @@ class SocialViewModel extends Notifier<SocialState> {
           followedUserIds: rollback,
           errorMessage: failure.message,
         );
+        _followInFlight.remove(targetUserId);
       },
       (data) {
         final isFollowing = data['isFollowing'] as bool;
@@ -122,6 +140,7 @@ class SocialViewModel extends Notifier<SocialState> {
             'followingCount': data['followingCount'],
           },
         );
+        _followInFlight.remove(targetUserId);
       },
     );
   }

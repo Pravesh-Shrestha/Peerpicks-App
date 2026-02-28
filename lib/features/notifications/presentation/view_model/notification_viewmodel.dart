@@ -53,6 +53,7 @@ class NotificationViewModel extends Notifier<NotificationState> {
           type: n.type,
           status: n.status,
           pickId: n.pickId,
+          about: n.about,
           message: n.message,
           read: true,
           createdAt: n.createdAt,

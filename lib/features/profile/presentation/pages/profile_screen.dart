@@ -24,8 +24,6 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  static const Color peerLime = Color(0xFFB4D333);
-
   @override
   void initState() {
     super.initState();
@@ -194,7 +192,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     int picksCount,
   ) {
     final userSession = ref.watch(userSessionServiceProvider);
-    final cs = Theme.of(context).colorScheme;
     final String? serverImagePath = userSession.getCurrentUserProfilePicture();
     final String initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
