@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peerpicks/app/routes/app_routes.dart';
 import 'package:peerpicks/common/app_colors.dart';
+import 'package:peerpicks/core/services/auth/biometric_auth_service.dart';
+import 'package:peerpicks/core/services/storage/user_session_service.dart';
 import 'package:peerpicks/core/utils/mysnackbar.dart';
+import 'package:peerpicks/features/auth/presentation/pages/forgot_password_screen.dart';
 import 'package:peerpicks/features/auth/presentation/pages/sign_up_screen.dart';
 import 'package:peerpicks/features/auth/presentation/state/auth_state.dart';
 import 'package:peerpicks/features/auth/presentation/view_model/auth_viewmodel.dart';
@@ -22,6 +25,29 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final TextEditingController _passwordController = TextEditingController();
 
   bool _isPasswordVisible = false;
+  bool _showBiometricLogin = false;
+  bool _hasSavedBiometricCredentials = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(_prepareBiometricLogin);
+  }
+
+  Future<void> _prepareBiometricLogin() async {
+    final biometricService = ref.read(biometricAuthServiceProvider);
+    final sessionService = ref.read(userSessionServiceProvider);
+
+    final canUseBiometrics = await biometricService.canUseBiometrics();
+    final isEnabled = sessionService.isBiometricLoginEnabled();
+    final creds = await sessionService.getBiometricCredentials();
+    if (!mounted) return;
+
+    setState(() {
+      _showBiometricLogin = canUseBiometrics && isEnabled;
+      _hasSavedBiometricCredentials = creds != null;
+    });
+  }
 
   @override
   void dispose() {
@@ -46,6 +72,33 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
   }
 
+  Future<void> _signInWithBiometric() async {
+    final biometricService = ref.read(biometricAuthServiceProvider);
+    final sessionService = ref.read(userSessionServiceProvider);
+
+    final authenticated = await biometricService.authenticate();
+    if (!authenticated) return;
+
+    final creds = await sessionService.getBiometricCredentials();
+    if (creds == null) {
+      if (!mounted) return;
+      showMySnackBar(
+        context: context,
+        message: 'No saved credentials found for biometric sign-in.',
+        color: Colors.red,
+      );
+      return;
+    }
+
+    final (email, password) = creds;
+    _emailController.text = email;
+    _passwordController.text = password;
+
+    ref
+        .read(authViewModelProvider.notifier)
+        .login(email: email, password: password);
+  }
+
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) return 'Email is required.';
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
@@ -67,6 +120,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     ref.listen<AuthState>(authViewModelProvider, (previous, next) {
       if (next.status == AuthStatus.authenticated) {
         if (context.mounted) {
+          final sessionService = ref.read(userSessionServiceProvider);
+          if (sessionService.isBiometricLoginEnabled()) {
+            sessionService.saveBiometricCredentials(
+              email: _emailController.text.trim(),
+              password: _passwordController.text.trim(),
+            );
+          }
           showMySnackBar(
             context: context,
             message: 'Login Successful!',
@@ -91,8 +151,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     final authState = ref.watch(authViewModelProvider);
     final bool isLoading = authState.status == AuthStatus.loading;
 
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -153,7 +214,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   alignment: Alignment.centerRight,
                   child: InkWell(
                     onTap: () {
-                      // Add forgot password navigation here
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ForgotPasswordScreen(),
+                        ),
+                      );
                     },
                     child: Text(
                       "Forgot password?",
@@ -167,23 +233,43 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 ),
                 const SizedBox(height: 40),
                 buildActionButton(
+                  context: context,
                   text: isLoading ? "PLEASE WAIT..." : "SIGN IN",
                   onTap: isLoading ? () {} : _submitForm,
-                  color: Colors.black,
+                  color: cs.onSurface,
                 ),
+                if (_showBiometricLogin) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: isLoading ? null : _signInWithBiometric,
+                    icon: const Icon(Icons.fingerprint_rounded),
+                    label: Text(
+                      _hasSavedBiometricCredentials
+                          ? 'Use Face ID / Fingerprint'
+                          : 'Enable Face ID / Fingerprint (after first login)',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 52),
+                      side: BorderSide(color: cs.outline),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 18),
                 Center(
                   child: GestureDetector(
                     onTap: isLoading ? null : _navigateToSignUp,
-                    child: const Text.rich(
+                    child: Text.rich(
                       TextSpan(
-                        style: TextStyle(fontSize: 14, color: Colors.grey),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: cs.onSurfaceVariant,
+                        ),
                         children: [
-                          TextSpan(text: "Don’t have an account? "),
+                          const TextSpan(text: "Don't have an account? "),
                           TextSpan(
                             text: "Sign up.",
                             style: TextStyle(
-                              color: AppColors.primaryGreen,
+                              color: cs.primary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -193,7 +279,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   ),
                 ),
                 const SizedBox(height: 60),
-                buildSocialRow(),
+                buildSocialRow(context: context),
                 const SizedBox(height: 30),
               ],
             ),

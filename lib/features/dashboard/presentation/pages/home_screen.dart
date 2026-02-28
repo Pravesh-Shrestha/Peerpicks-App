@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peerpicks/features/reviews/presentation/pages/add_review_screen.dart';
 import 'package:peerpicks/features/dashboard/presentation/pages/dashboard_screen.dart';
 import 'package:peerpicks/features/dashboard/presentation/pages/favorites_screen.dart';
 import 'package:peerpicks/features/dashboard/presentation/pages/notification_screen.dart';
+import 'package:peerpicks/features/notifications/presentation/view_model/notification_viewmodel.dart';
 import 'package:peerpicks/features/profile/presentation/pages/profile_screen.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
+class _HomeScreenState extends ConsumerState<HomeScreen>
     with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   late AnimationController _fabController;
@@ -32,6 +34,9 @@ class _HomeScreenState extends State<HomeScreen>
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
+    Future.microtask(
+      () => ref.read(notificationViewModelProvider.notifier).getUnreadCount(),
+    );
   }
 
   @override
@@ -49,6 +54,10 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final notifState = ref.watch(notificationViewModelProvider);
+    final unreadCount = notifState.unreadCount;
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       body: lstBottomScreen[_selectedIndex],
       extendBody: true,
@@ -59,14 +68,17 @@ class _HomeScreenState extends State<HomeScreen>
         child: Container(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              colors: [Color.fromARGB(255, 122, 187, 102), Color(0xFFB4D333)],
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF75A638),
+                const Color(0xFF75A638),
+              ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF4CAF50).withOpacity(0.4),
+                color: const Color(0xFF75A638).withOpacity(0.4),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -74,8 +86,8 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           child: FloatingActionButton(
             onPressed: () => _onTab(2),
-            backgroundColor: const Color.fromARGB(0, 255, 255, 255),
-            foregroundColor: const Color.fromARGB(255, 0, 0, 0),
+            backgroundColor: Colors.transparent,
+            foregroundColor: cs.onPrimary,
             elevation: 0,
             child: const Icon(Icons.add_rounded, size: 32),
           ),
@@ -95,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen>
         child: BottomAppBar(
           shape: const CircularNotchedRectangle(),
           notchMargin: 10,
-          color: const Color.fromARGB(255, 0, 0, 0),
+          color: Colors.black,
           elevation: 0,
           child: SizedBox(
             height: 65,
@@ -123,6 +135,7 @@ class _HomeScreenState extends State<HomeScreen>
                   index: 3,
                   selectedIndex: _selectedIndex,
                   onTap: () => _onTab(3),
+                  badgeCount: unreadCount,
                 ),
                 _ModernNavIcon(
                   icon: Icons.person_rounded,
@@ -146,6 +159,7 @@ class _ModernNavIcon extends StatefulWidget {
   final int index;
   final int selectedIndex;
   final VoidCallback onTap;
+  final int badgeCount;
 
   const _ModernNavIcon({
     required this.icon,
@@ -153,6 +167,7 @@ class _ModernNavIcon extends StatefulWidget {
     required this.index,
     required this.selectedIndex,
     required this.onTap,
+    this.badgeCount = 0,
   });
 
   @override
@@ -201,6 +216,7 @@ class _ModernNavIconState extends State<_ModernNavIcon>
   @override
   Widget build(BuildContext context) {
     final bool isActive = widget.index == widget.selectedIndex;
+    final cs = Theme.of(context).colorScheme;
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -222,21 +238,48 @@ class _ModernNavIconState extends State<_ModernNavIcon>
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         color: isActive
-                            ? const Color.fromARGB(
-                                255,
-                                143,
-                                227,
-                                7,
-                              ).withOpacity(0.15)
+                            ? const Color(0xFF75A638).withOpacity(0.15)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(
-                        widget.icon,
-                        color: isActive
-                            ? const Color(0xFFB4D333)
-                            : Colors.white.withOpacity(0.5),
-                        size: 24,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Icon(
+                            widget.icon,
+                            color: isActive
+                                ? const Color(0xFF75A638)
+                                : Colors.white.withOpacity(0.5),
+                            size: 24,
+                          ),
+                          if (widget.badgeCount > 0)
+                            Positioned(
+                              right: -6,
+                              top: -4,
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                constraints: const BoxConstraints(
+                                  minWidth: 16,
+                                  minHeight: 16,
+                                ),
+                                child: Text(
+                                  widget.badgeCount > 99
+                                      ? '99+'
+                                      : '${widget.badgeCount}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),
@@ -250,7 +293,7 @@ class _ModernNavIconState extends State<_ModernNavIcon>
                 fontSize: isActive ? 10 : 9,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                 color: isActive
-                    ? const Color(0xFF66BB6A)
+                    ? const Color(0xFF75A638)
                     : Colors.white.withOpacity(0.5),
                 letterSpacing: 0.3,
               ),

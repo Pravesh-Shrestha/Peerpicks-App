@@ -61,9 +61,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   // --- IMAGE PICKING LOGIC ---
 
   Future<void> _showPickOptions() async {
+    final cs = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.white,
+      backgroundColor: cs.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -78,9 +79,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               ),
             ),
             ListTile(
-              leading: const Icon(
+              leading: Icon(
                 Icons.camera_alt_rounded,
-                color: AppColors.primaryGreen,
+                color: cs.primary,
               ),
               title: const Text('Take a Photo'),
               onTap: () {
@@ -89,9 +90,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(
+              leading: Icon(
                 Icons.photo_library_rounded,
-                color: AppColors.primaryGreen,
+                color: cs.primary,
               ),
               title: const Text('Choose from Gallery'),
               onTap: () {
@@ -117,8 +118,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         source: source,
         imageQuality: 75,
       );
-      if (pickedFile != null)
+      if (pickedFile != null) {
         setState(() => _imageFile = File(pickedFile.path));
+      }
     } else if (status.isPermanentlyDenied) {
       _showSettingsDialog();
     }
@@ -228,19 +230,19 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: AppColors.greyBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppColors.darkText),
+          icon: Icon(Icons.arrow_back_ios, color: cs.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Edit Profile',
           style: TextStyle(
-            color: AppColors.darkText,
+            color: cs.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -278,6 +280,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Widget _buildAvatarSection(WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
     final String name = _nameController.text.trim();
     final String initial = name.isNotEmpty ? name[0].toUpperCase() : "?";
 
@@ -290,10 +293,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         children: [
           CircleAvatar(
             radius: 60,
-            backgroundColor: AppColors.primaryGreen,
+            backgroundColor: cs.primary,
             child: CircleAvatar(
               radius: 57,
-              backgroundColor: AppColors.fieldFill,
+              backgroundColor: cs.surfaceContainerHighest,
               // Priority: 1. Locally picked image, 2. Server image, 3. Initials
               backgroundImage: _imageFile != null
                   ? FileImage(_imageFile!)
@@ -306,10 +309,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               child: (_imageFile == null && serverImagePath == null)
                   ? Text(
                       initial,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 42,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.primaryGreen,
+                        color: cs.primary,
                       ),
                     )
                   : null,
@@ -322,13 +325,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               onTap: _showPickOptions,
               child: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(
-                  color: AppColors.darkText,
+                decoration: BoxDecoration(
+                  color: cs.onSurface,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.camera_alt,
-                  color: AppColors.white,
+                  color: cs.surface,
                   size: 20,
                 ),
               ),
@@ -345,14 +348,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     IconData icon, {
     bool enabled = true,
   }) {
+    final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: AppColors.lightText,
+            color: cs.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 8),
@@ -361,8 +365,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           enabled: enabled,
           decoration: InputDecoration(
             filled: true,
-            fillColor: enabled ? AppColors.white : AppColors.fieldFill,
-            prefixIcon: Icon(icon, color: AppColors.primaryGreen),
+            fillColor: enabled ? cs.surface : cs.surfaceContainerHighest,
+            prefixIcon: Icon(icon, color: cs.primary),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -374,14 +378,15 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Widget _buildDateField() {
+    final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Date of Birth',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: AppColors.lightText,
+            color: cs.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 8),
@@ -405,10 +410,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               controller: _dobController,
               decoration: InputDecoration(
                 filled: true,
-                fillColor: AppColors.white,
-                prefixIcon: const Icon(
+                fillColor: cs.surface,
+                prefixIcon: Icon(
                   Icons.calendar_today,
-                  color: AppColors.primaryGreen,
+                  color: cs.primary,
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -423,31 +428,32 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Widget _buildUpdateButton() {
+    final cs = Theme.of(context).colorScheme;
     return SizedBox(
       width: double.infinity,
       height: 55,
       child: ElevatedButton(
         onPressed: _isLoading ? null : _saveProfile,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primaryGreen,
+          backgroundColor: cs.primary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           elevation: 0,
         ),
         child: _isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 height: 24,
                 width: 24,
                 child: CircularProgressIndicator(
-                  color: AppColors.white,
+                  color: cs.onPrimary,
                   strokeWidth: 2,
                 ),
               )
-            : const Text(
+            : Text(
                 'UPDATE PROFILE',
                 style: TextStyle(
-                  color: AppColors.white,
+                  color: cs.onPrimary,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),

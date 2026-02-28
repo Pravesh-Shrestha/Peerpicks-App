@@ -56,8 +56,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final isTablet = MediaQuery.of(context).size.shortestSide > 600;
     final currentContent = contents[_currentPage];
 
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -70,12 +71,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     height: 60,
                     child: Image.asset(
                       'assets/images/logos/logo.png',
-                      errorBuilder: (context, error, stackTrace) => const Text(
+                      errorBuilder: (context, error, stackTrace) => Text(
                         'PeerPicks',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primaryGreen,
+                          color: cs.primary,
                         ),
                       ),
                     ),
@@ -84,10 +85,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ? const SizedBox(width: 50)
                       : TextButton(
                           onPressed: _skipOnboarding,
-                          child: const Text(
+                          child: Text(
                             "Skip",
                             style: TextStyle(
-                              color: AppColors.lightText,
+                              color: cs.onSurfaceVariant,
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),

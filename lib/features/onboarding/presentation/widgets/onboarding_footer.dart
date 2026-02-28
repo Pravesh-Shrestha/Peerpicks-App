@@ -18,6 +18,7 @@ class OnboardingFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Column(
       children: [
         Row(
@@ -31,8 +32,8 @@ class OnboardingFooter extends StatelessWidget {
               width: isActive ? 25.0 : 10.0,
               decoration: BoxDecoration(
                 color: isActive
-                    ? AppColors.primaryGreen
-                    : AppColors.indicatorInactive,
+                    ? cs.primary
+                    : cs.outlineVariant,
                 borderRadius: BorderRadius.circular(5),
               ),
             );

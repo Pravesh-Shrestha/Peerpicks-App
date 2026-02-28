@@ -45,5 +45,15 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We use your location to show nearby picks and improve recommendations.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We use your location to show nearby picks and improve recommendations.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>We use motion sensors for shake-to-refresh and tilt interactions.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Use Face ID to quickly and securely sign in to your account.</string>
+	<key>NSSensorKitUsageDescription</key>
+	<string>We use ambient light data to automatically switch between light and dark themes.</string>
 </dict>
 </plist>

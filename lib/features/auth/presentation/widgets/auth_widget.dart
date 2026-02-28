@@ -12,15 +12,18 @@ Widget buildAuthTextFormField({
   TextInputType keyboardType = TextInputType.text,
   bool obscureText = false,
   Widget? suffixIcon,
+  BuildContext? context,
 }) {
+  final cs = context != null ? Theme.of(context).colorScheme : null;
+
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text(
         labelText,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
-          color: darkTextColor,
+          color: cs?.onSurface ?? darkTextColor,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -30,19 +33,25 @@ Widget buildAuthTextFormField({
         keyboardType: keyboardType,
         obscureText: obscureText,
         validator: validator,
-        cursorColor: peerPicksGreen,
+        cursorColor: cs?.primary ?? peerPicksGreen,
         decoration: InputDecoration(
           hintText: hintText,
           suffixIcon: suffixIcon,
           filled: true,
-          fillColor: Colors.grey.shade100,
+          fillColor: cs?.surfaceContainerHighest ?? Colors.grey.shade100,
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: Colors.grey.shade300, width: 1.0),
+            borderSide: BorderSide(
+              color: cs?.outlineVariant ?? Colors.grey.shade300,
+              width: 1.0,
+            ),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: const BorderSide(color: peerPicksGreen, width: 2.0),
+            borderSide: BorderSide(
+              color: cs?.primary ?? peerPicksGreen,
+              width: 2.0,
+            ),
           ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -57,19 +66,23 @@ Widget buildAuthTextFormField({
 Widget buildActionButton({
   required String text,
   required VoidCallback onTap,
-  Color color = peerPicksGreen,
+  Color? color,
+  BuildContext? context,
 }) {
+  final cs = context != null ? Theme.of(context).colorScheme : null;
+  final btnColor = color ?? cs?.primary ?? peerPicksGreen;
+
   return GestureDetector(
     onTap: onTap,
     child: Container(
       width: double.infinity,
       height: 50,
       decoration: BoxDecoration(
-        color: color,
+        color: btnColor,
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.4),
+            color: btnColor.withOpacity(0.4),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -78,8 +91,8 @@ Widget buildActionButton({
       child: Center(
         child: Text(
           text,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: cs?.onPrimary ?? Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 16,
           ),
@@ -103,14 +116,16 @@ Widget buildVisibilityToggle({
   );
 }
 
-Widget socialCircle(IconData icon, Color iconColor) {
+Widget socialCircle(IconData icon, Color iconColor, {BuildContext? context}) {
+  final cs = context != null ? Theme.of(context).colorScheme : null;
+
   return Container(
     width: 45,
     height: 45,
     decoration: BoxDecoration(
       shape: BoxShape.circle,
-      border: Border.all(color: Colors.grey.shade400),
-      color: Colors.white,
+      border: Border.all(color: cs?.outlineVariant ?? Colors.grey.shade400),
+      color: cs?.surface ?? Colors.white,
       boxShadow: [
         BoxShadow(
           color: Colors.grey.withOpacity(0.1),
@@ -123,15 +138,23 @@ Widget socialCircle(IconData icon, Color iconColor) {
   );
 }
 
-Widget buildSocialRow() {
+Widget buildSocialRow({BuildContext? context}) {
   return Row(
     mainAxisAlignment: MainAxisAlignment.center,
     children: [
-      socialCircle(FontAwesomeIcons.facebookF, const Color(0xFF1877F2)),
+      socialCircle(
+        FontAwesomeIcons.facebookF,
+        const Color(0xFF1877F2),
+        context: context,
+      ),
       const SizedBox(width: 20),
-      socialCircle(FontAwesomeIcons.github, darkTextColor),
+      socialCircle(
+        FontAwesomeIcons.github,
+        const Color(0xFF333333),
+        context: context,
+      ),
       const SizedBox(width: 20),
-      socialCircle(FontAwesomeIcons.google, Colors.red),
+      socialCircle(FontAwesomeIcons.google, Colors.red, context: context),
     ],
   );
 }

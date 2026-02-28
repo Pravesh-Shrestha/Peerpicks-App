@@ -8,18 +8,32 @@ final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError('SharedPreferences must be overridden in main.dart');
 });
 
-final secureStorageProvider = Provider(
-  (ref) => const FlutterSecureStorage(
-    // EncryptedSharedPreferences is better for Android
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  ),
-);
+final secureStorageProvider = Provider((ref) => const FlutterSecureStorage());
 
 final userSessionServiceProvider = Provider<UserSessionService>((ref) {
   final prefs = ref.watch(sharedPreferencesProvider);
   final secureStorage = ref.watch(secureStorageProvider);
   return UserSessionService(prefs: prefs, secureStorage: secureStorage);
 });
+
+final biometricLoginEnabledProvider =
+    NotifierProvider<BiometricLoginEnabledNotifier, bool>(
+      BiometricLoginEnabledNotifier.new,
+    );
+
+class BiometricLoginEnabledNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    return ref.read(userSessionServiceProvider).isBiometricLoginEnabled();
+  }
+
+  Future<void> setEnabled(bool enabled) async {
+    state = enabled;
+    await ref
+        .read(userSessionServiceProvider)
+        .setBiometricLoginEnabled(enabled);
+  }
+}
 
 class UserSessionService {
   final SharedPreferences _prefs;
@@ -37,6 +51,9 @@ class UserSessionService {
   static const String _keyUserProfilePicture = 'user_profile_picture';
   static const String _keyUserDob = 'user_dob';
   static const String _tokenKey = 'auth_token';
+  static const String _savedLoginEmailKey = 'saved_login_email';
+  static const String _savedLoginPasswordKey = 'saved_login_password';
+  static const String _keyBiometricLoginEnabled = 'biometric_login_enabled';
 
   UserSessionService({
     required SharedPreferences prefs,
@@ -96,6 +113,43 @@ class UserSessionService {
 
   Future<String?> getToken() async => await _secureStorage.read(key: _tokenKey);
 
+  Future<void> saveBiometricCredentials({
+    required String email,
+    required String password,
+  }) async {
+    await _secureStorage.write(key: _savedLoginEmailKey, value: email);
+    await _secureStorage.write(key: _savedLoginPasswordKey, value: password);
+  }
+
+  Future<(String, String)?> getBiometricCredentials() async {
+    final email = await _secureStorage.read(key: _savedLoginEmailKey);
+    final password = await _secureStorage.read(key: _savedLoginPasswordKey);
+
+    if (email == null ||
+        email.isEmpty ||
+        password == null ||
+        password.isEmpty) {
+      return null;
+    }
+
+    return (email, password);
+  }
+
+  Future<void> clearBiometricCredentials() async {
+    await _secureStorage.delete(key: _savedLoginEmailKey);
+    await _secureStorage.delete(key: _savedLoginPasswordKey);
+  }
+
+  bool isBiometricLoginEnabled() =>
+      _prefs.getBool(_keyBiometricLoginEnabled) ?? true;
+
+  Future<void> setBiometricLoginEnabled(bool enabled) async {
+    await _prefs.setBool(_keyBiometricLoginEnabled, enabled);
+    if (!enabled) {
+      await clearBiometricCredentials();
+    }
+  }
+
   String? getCurrentUserId() => _prefs.getString(_keyUserId);
   String? getCurrentUserEmail() => _prefs.getString(_keyUserEmail);
   String? getCurrentUserFullName() => _prefs.getString(_keyUserFullName);
@@ -111,9 +165,22 @@ class UserSessionService {
 
   /// Delete session (Protocol Compliance: Clear all storage)
   /// Replaces "purge" or "clear" to align with project standards.
-  Future<void> clearSession() async {
-    await _prefs.clear();
-    await _secureStorage.deleteAll();
+  Future<void> clearSession({bool preserveBiometricCredentials = true}) async {
+    await _prefs.remove(_keyIsLoggedIn);
+    await _prefs.remove(_keyUserId);
+    await _prefs.remove(_keyUserEmail);
+    await _prefs.remove(_keyUserFullName);
+    await _prefs.remove(_keyUserPhone);
+    await _prefs.remove(_keyUserProfilePicture);
+    await _prefs.remove(_keyUserDob);
+
+    await _secureStorage.delete(key: _tokenKey);
+
+    if (!preserveBiometricCredentials) {
+      await clearBiometricCredentials();
+      await _prefs.remove(_keyBiometricLoginEnabled);
+    }
+
     _authStateController.add(false);
   }
 

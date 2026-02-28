@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:peerpicks/common/app_colors.dart';
 
-showMySnackBar({
+void showMySnackBar({
   required BuildContext context,
   required String message,
   bool isError = false,

@@ -103,7 +103,9 @@ class AuthLocalDataSource implements IAuthLocalDataSource {
   @override
   Future<bool> logout() async {
     try {
-      await _userSessionService.clearSession();
+      await _userSessionService.clearSession(
+        preserveBiometricCredentials: true,
+      );
       return true;
     } catch (e) {
       return false;

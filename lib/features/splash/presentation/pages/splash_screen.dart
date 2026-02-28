@@ -27,7 +27,7 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        color: Colors.white,
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: Image.asset(
           "assets/images/splash/peer_picks_splash.png",
           fit: BoxFit.cover,
