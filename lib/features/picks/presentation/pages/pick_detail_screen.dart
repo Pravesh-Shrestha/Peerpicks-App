@@ -900,13 +900,17 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
     ColorScheme cs,
   ) {
     final isVoted = socialState.votedPickIds.contains(pick.id);
+    final initialVoted = pick.hasUpvoted;
+    final displayedUpvoteCount = isVoted == initialVoted
+        ? pick.upvoteCount
+        : pick.upvoteCount + (isVoted ? 1 : -1);
     final isFavorited = socialState.favoritedPickIds.contains(pick.id);
 
     return Row(
       children: [
         _EngagementButton(
           icon: isVoted ? Icons.thumb_up : Icons.thumb_up_outlined,
-          label: '${pick.upvoteCount}',
+          label: '$displayedUpvoteCount',
           isActive: isVoted,
           activeColor: cs.primary,
           onTap: () =>

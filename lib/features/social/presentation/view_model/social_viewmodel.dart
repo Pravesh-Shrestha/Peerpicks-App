@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peerpicks/features/picks/domain/entities/pick_entity.dart';
+import 'package:peerpicks/features/picks/presentation/view_model/picks_viewmodel.dart';
 import 'package:peerpicks/features/social/data/repositories/social_repository.dart';
 import 'package:peerpicks/features/social/domain/repositories/social_repository.dart';
 import 'package:peerpicks/features/social/presentation/state/social_state.dart';
@@ -66,7 +67,10 @@ class SocialViewModel extends Notifier<SocialState> {
         );
         _voteInFlight.remove(pickId);
       },
-      (isUpvoted) {
+      (voteData) {
+        final isUpvoted = voteData['isUpvoted'] == true;
+        final upvoteCount = (voteData['upvoteCount'] as num?)?.toInt() ?? 0;
+
         // Sync with server truth
         final synced = Set<String>.from(state.votedPickIds);
         if (isUpvoted) {
@@ -75,6 +79,15 @@ class SocialViewModel extends Notifier<SocialState> {
           synced.remove(pickId);
         }
         state = state.copyWith(votedPickIds: synced);
+
+        ref
+            .read(picksViewModelProvider.notifier)
+            .syncVoteForPick(
+              pickId: pickId,
+              isUpvoted: isUpvoted,
+              upvoteCount: upvoteCount,
+            );
+
         _voteInFlight.remove(pickId);
       },
     );

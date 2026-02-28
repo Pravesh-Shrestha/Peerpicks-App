@@ -1237,6 +1237,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final socialState = ref.watch(socialViewModelProvider);
     final hasMedia = pick.mediaUrls.isNotEmpty;
     final isLiked = socialState.votedPickIds.contains(pick.id);
+    final initialLiked = pick.hasUpvoted;
+    final displayedUpvoteCount = isLiked == initialLiked
+        ? pick.upvoteCount
+        : pick.upvoteCount + (isLiked ? 1 : -1);
     final isSaved = socialState.favoritedPickIds.contains(pick.id);
     final isTablet = MediaQuery.of(context).size.width > 600;
     final mediaHeight = isTablet ? 420.0 : 350.0;
@@ -1529,7 +1533,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     icon: isLiked
                         ? Icons.thumb_up_rounded
                         : Icons.thumb_up_alt_outlined,
-                    label: '${pick.upvoteCount}',
+                    label: '$displayedUpvoteCount',
                     isActive: isLiked,
                     onTap: () => ref
                         .read(socialViewModelProvider.notifier)

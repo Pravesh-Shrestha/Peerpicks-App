@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:peerpicks/features/picks/domain/entities/pick_entity.dart';
 import 'package:peerpicks/features/picks/domain/usecases/create_pick_usecase.dart';
 import 'package:peerpicks/features/picks/domain/usecases/delete_pick_usecase.dart';
 import 'package:peerpicks/features/picks/domain/usecases/get_discovery_feed_usecase.dart';
@@ -242,5 +243,45 @@ class PicksViewModel extends Notifier<PicksState> {
       (picks) =>
           state = state.copyWith(status: PicksStatus.loaded, picks: picks),
     );
+  }
+
+  void syncVoteForPick({
+    required String pickId,
+    required bool isUpvoted,
+    required int upvoteCount,
+  }) {
+    PickEntity apply(PickEntity pick) {
+      return PickEntity(
+        id: pick.id,
+        userId: pick.userId,
+        placeId: pick.placeId,
+        alias: pick.alias,
+        stars: pick.stars,
+        description: pick.description,
+        mediaUrls: pick.mediaUrls,
+        tags: pick.tags,
+        category: pick.category,
+        userName: pick.userName,
+        userProfilePicture: pick.userProfilePicture,
+        locationName: pick.locationName,
+        hasUpvoted: isUpvoted,
+        upvoteCount: upvoteCount,
+        downvoteCount: pick.downvoteCount,
+        commentCount: pick.commentCount,
+        latitude: pick.latitude,
+        longitude: pick.longitude,
+        createdAt: pick.createdAt,
+      );
+    }
+
+    final updatedPicks = state.picks
+        .map((pick) => pick.id == pickId ? apply(pick) : pick)
+        .toList();
+
+    final updatedSelected = state.selectedPick?.id == pickId
+        ? apply(state.selectedPick!)
+        : state.selectedPick;
+
+    state = state.copyWith(picks: updatedPicks, selectedPick: updatedSelected);
   }
 }
