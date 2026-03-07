@@ -91,6 +91,34 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return null;
   }
 
+  static String? _firstVideoUrl(PickEntity pick) {
+    for (final url in pick.mediaUrls) {
+      if (_isVideo(url)) return url;
+    }
+    return null;
+  }
+
+  /// Build a lightweight thumbnail URL for video assets.
+  /// For Cloudinary videos, appending .jpg returns a poster frame.
+  static String? _videoThumbnailUrl(String? videoUrl) {
+    if (videoUrl == null || videoUrl.isEmpty) return null;
+
+    final resolved = ApiEndpoints.resolveServerUrl(videoUrl);
+    // Strip query params/fragments and swap the extension with .jpg
+    final uri = Uri.parse(resolved);
+    final cleanPath = uri.path.replaceFirst(RegExp(r'\.[^./]+$'), '');
+    final jpgPath = '$cleanPath.jpg';
+    return uri.replace(path: jpgPath, query: null, fragment: null).toString();
+  }
+
+  /// Choose an image or a derived video thumbnail to preview in the grid.
+  String? _previewUrl(PickEntity pick) {
+    final imageUrl = _firstImageUrl(pick);
+    if (imageUrl != null) return imageUrl;
+    final videoUrl = _firstVideoUrl(pick);
+    return _videoThumbnailUrl(videoUrl);
+  }
+
   List<PickEntity> _filterByCategory(List<PickEntity> picks) {
     if (_selectedCategory == null) return picks;
     return picks
@@ -196,9 +224,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                   side: BorderSide(
-                    color: isSelected
-                        ? cs.primary
-                        : cs.outlineVariant,
+                    color: isSelected ? cs.primary : cs.outlineVariant,
                   ),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -219,10 +245,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     if (!_hasSearched) {
       if (picksState.status == PicksStatus.loading && picks.isEmpty) {
         return Center(
-          child: CircularProgressIndicator(
-            color: cs.primary,
-            strokeWidth: 2.5,
-          ),
+          child: CircularProgressIndicator(color: cs.primary, strokeWidth: 2.5),
         );
       }
       if (picks.isEmpty) {
@@ -238,10 +261,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     if (picksState.status == PicksStatus.loading) {
       return Center(
-        child: CircularProgressIndicator(
-          color: cs.primary,
-          strokeWidth: 2.5,
-        ),
+        child: CircularProgressIndicator(color: cs.primary, strokeWidth: 2.5),
       );
     }
 
@@ -266,7 +286,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return _buildMasonryGrid(picks, isTablet, cs);
   }
 
-  Widget _buildMasonryGrid(List<PickEntity> picks, bool isTablet, ColorScheme cs) {
+  Widget _buildMasonryGrid(
+    List<PickEntity> picks,
+    bool isTablet,
+    ColorScheme cs,
+  ) {
     final columns = isTablet ? 3 : 2;
     final padding = isTablet ? 20.0 : 12.0;
     final spacing = isTablet ? 12.0 : 8.0;
@@ -316,7 +340,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Widget _buildPinterestCard(PickEntity pick, ColorScheme cs) {
-    final imgUrl = _firstImageUrl(pick);
+    final previewUrl = _previewUrl(pick);
     final hasVideo = pick.mediaUrls.any((u) => _isVideo(u));
     final cardImageHeight = _getCardHeight(pick.id);
 
@@ -352,9 +376,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    if (imgUrl != null)
+                    if (previewUrl != null)
                       CachedNetworkImage(
-                        imageUrl: ApiEndpoints.resolveServerUrl(imgUrl),
+                        imageUrl: ApiEndpoints.resolveServerUrl(previewUrl),
                         fit: BoxFit.cover,
                         placeholder: (_, url) => Container(
                           color: cs.surfaceContainerHighest,

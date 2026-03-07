@@ -102,6 +102,56 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return null;
   }
 
+  static String? _firstVideoUrl(PickEntity pick) {
+    for (final url in pick.mediaUrls) {
+      if (_isVideo(url)) return url;
+    }
+    return null;
+  }
+
+  /// Build a lightweight thumbnail URL for video assets.
+  /// For Cloudinary videos, appending .jpg returns a poster frame.
+  static String? _videoThumbnailUrl(String? videoUrl) {
+    if (videoUrl == null || videoUrl.isEmpty) return null;
+    final resolved = ApiEndpoints.resolveServerUrl(videoUrl);
+
+    try {
+      final uri = Uri.parse(resolved);
+      final isCloudinary = uri.host.contains('res.cloudinary.com');
+      final isVideoResource = uri.path.contains('/video/upload/');
+
+      if (isCloudinary && isVideoResource) {
+        final segments = List<String>.from(uri.pathSegments);
+        final uploadIdx = segments.indexOf('upload');
+        if (uploadIdx != -1) {
+          // Ask for the first frame thumbnail
+          segments.insert(uploadIdx + 1, 'so_0');
+        }
+        final last = segments.removeLast();
+        final baseName = last.replaceFirst(RegExp(r'\.[^./]+$'), '');
+        segments.add('$baseName.jpg');
+        return uri
+            .replace(pathSegments: segments, query: null, fragment: null)
+            .toString();
+      }
+
+      // Fallback: swap extension with .jpg
+      final cleanPath = uri.path.replaceFirst(RegExp(r'\.[^./]+$'), '');
+      final jpgPath = '$cleanPath.jpg';
+      return uri.replace(path: jpgPath, query: null, fragment: null).toString();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Choose an image or a derived video thumbnail to preview.
+  static String? _previewUrl(PickEntity pick) {
+    final img = _firstImageUrl(pick);
+    if (img != null) return img;
+    final vid = _firstVideoUrl(pick);
+    return _videoThumbnailUrl(vid);
+  }
+
   void _configureMotion(SensorSettingsState settings) {
     final shouldListen =
         settings.shakeToRefreshEnabled || settings.tiltToOpenEnabled;
@@ -815,9 +865,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   Widget _buildFeaturedCarousel(List<PickEntity> picks) {
     final featured = picks
-        .where(
-          (p) => p.mediaUrls.isNotEmpty && p.mediaUrls.any((u) => !_isVideo(u)),
-        )
+        .where((p) => p.mediaUrls.isNotEmpty && _previewUrl(p) != null)
         .take(5)
         .toList();
     if (featured.isEmpty) return _buildCarouselSkeleton();
@@ -836,7 +884,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       ),
       itemBuilder: (context, index, realIndex) {
         final pick = featured[index];
-        final imgUrl = _firstImageUrl(pick);
+        final previewUrl = _previewUrl(pick);
         return GestureDetector(
           onTap: () => Navigator.push(
             context,
@@ -854,7 +902,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (imgUrl != null) networkImage(imgUrl),
+                  if (previewUrl != null) networkImage(previewUrl),
                   Positioned(
                     bottom: 0,
                     left: 0,
@@ -948,7 +996,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         itemCount: picks.length,
         itemBuilder: (context, index) {
           final pick = picks[index];
-          final imgUrl = _firstImageUrl(pick);
+          final previewUrl = _previewUrl(pick);
           return GestureDetector(
             onTap: () => Navigator.push(
               context,
@@ -972,9 +1020,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   SizedBox(
                     height: isTablet ? 150 : 120,
                     width: double.infinity,
-                    child: imgUrl != null
+                    child: previewUrl != null
                         ? networkImage(
-                            imgUrl,
+                            previewUrl!,
                             borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(14),
                             ),
