@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:peerpicks/core/api/api_endpoints.dart';
 import 'package:peerpicks/core/services/storage/user_session_service.dart';
 import 'package:peerpicks/features/picks/domain/entities/pick_entity.dart';
+import 'package:peerpicks/features/picks/presentation/state/picks_state.dart';
 import 'package:peerpicks/features/picks/presentation/view_model/picks_viewmodel.dart';
 import 'package:peerpicks/features/social/presentation/state/social_state.dart';
 import 'package:peerpicks/features/social/presentation/view_model/social_viewmodel.dart';
@@ -77,6 +78,27 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
     if (diff.inHours > 0) return '${diff.inHours}h ago';
     if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
     return 'Just now';
+  }
+
+  String _formatPostedDate(DateTime date) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final day = date.day.toString().padLeft(2, '0');
+    final month = months[date.month - 1];
+    final year = date.year.toString();
+    return '$day $month $year';
   }
 
   bool _hasValidLocation(PickEntity pick) {
@@ -211,6 +233,167 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
           ),
         );
       },
+    );
+  }
+
+  void _showEditPickDialog(PickEntity pick) {
+    final cs = Theme.of(context).colorScheme;
+    final aliasController = TextEditingController(text: pick.alias);
+    final descriptionController = TextEditingController(text: pick.description);
+    double stars = pick.stars;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Edit Pick'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: aliasController,
+                  maxLength: 120,
+                  decoration: InputDecoration(
+                    labelText: 'Place Alias',
+                    counterText: '',
+                    filled: true,
+                    fillColor: cs.surfaceContainerHighest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: cs.outlineVariant),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: descriptionController,
+                  maxLength: 3000,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    labelText: 'Description',
+                    hintText: 'Write in detail — emojis are supported.',
+                    counterText: '',
+                    filled: true,
+                    fillColor: cs.surfaceContainerHighest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: cs.outlineVariant),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Rating: ${stars.toStringAsFixed(1)}',
+                  style: TextStyle(
+                    color: cs.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Slider(
+                  value: stars,
+                  min: 1,
+                  max: 5,
+                  divisions: 8,
+                  label: stars.toStringAsFixed(1),
+                  onChanged: (value) {
+                    setDialogState(() => stars = value);
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: cs.onSurfaceVariant),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                final alias = aliasController.text.trim();
+                final description = descriptionController.text.trim();
+
+                if (alias.isEmpty || description.isEmpty) {
+                  return;
+                }
+
+                Navigator.pop(ctx);
+                await ref
+                    .read(picksViewModelProvider.notifier)
+                    .updatePick(
+                      id: pick.id,
+                      alias: alias,
+                      description: description,
+                      stars: stars,
+                    );
+
+                if (!mounted) return;
+                final status = ref.read(picksViewModelProvider).status;
+                if (status == PicksStatus.updated) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Pick updated successfully'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              child: const Text(
+                'Save',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDeletePickDialog(PickEntity pick) {
+    final cs = Theme.of(context).colorScheme;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Pick'),
+        content: Text(
+          'Are you sure you want to delete "${pick.alias}"? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: TextStyle(color: cs.onSurfaceVariant)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final messenger = ScaffoldMessenger.of(context);
+              await ref
+                  .read(picksViewModelProvider.notifier)
+                  .deletePick(pick.id);
+              if (!mounted) return;
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text('Pick deleted'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              Navigator.pop(context);
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -351,6 +534,10 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
   Widget _buildSliverAppBar(PickEntity pick, bool isTablet) {
     final hasMedia = pick.mediaUrls.isNotEmpty;
     final appBarHeight = isTablet ? 360.0 : 300.0;
+    final currentUserId = ref
+        .read(userSessionServiceProvider)
+        .getCurrentUserId();
+    final isOwner = currentUserId != null && currentUserId == pick.userId;
 
     return SliverAppBar(
       expandedHeight: hasMedia ? appBarHeight : 120,
@@ -379,6 +566,46 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
           ),
           onPressed: () => _showShareSheet(pick),
         ),
+        if (isOwner)
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'edit') {
+                _showEditPickDialog(pick);
+              } else if (value == 'delete') {
+                _showDeletePickDialog(pick);
+              }
+            },
+            itemBuilder: (ctx) => const [
+              PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_outlined, size: 18, color: Colors.black87),
+                    SizedBox(width: 10),
+                    Text('Edit Pick'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                    SizedBox(width: 10),
+                    Text('Delete Pick', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.4),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.more_vert, color: Colors.white, size: 20),
+            ),
+          ),
       ],
       flexibleSpace: FlexibleSpaceBar(
         background: hasMedia
@@ -499,7 +726,7 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
                   ),
                 ),
                 Text(
-                  _timeAgo(pick.createdAt),
+                  _formatPostedDate(pick.createdAt),
                   style: TextStyle(
                     fontSize: isTablet ? 13 : 12,
                     color: cs.onSurfaceVariant,
@@ -673,13 +900,17 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
     ColorScheme cs,
   ) {
     final isVoted = socialState.votedPickIds.contains(pick.id);
+    final initialVoted = pick.hasUpvoted;
+    final displayedUpvoteCount = isVoted == initialVoted
+        ? pick.upvoteCount
+        : pick.upvoteCount + (isVoted ? 1 : -1);
     final isFavorited = socialState.favoritedPickIds.contains(pick.id);
 
     return Row(
       children: [
         _EngagementButton(
           icon: isVoted ? Icons.thumb_up : Icons.thumb_up_outlined,
-          label: '${pick.upvoteCount}',
+          label: '$displayedUpvoteCount',
           isActive: isVoted,
           activeColor: cs.primary,
           onTap: () =>
@@ -721,7 +952,7 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
         Expanded(
           child: TextField(
             controller: _commentController,
-            maxLength: 1000,
+            maxLength: 3000,
             decoration: InputDecoration(
               hintText: 'Add a comment...',
               hintStyle: TextStyle(color: cs.onSurfaceVariant),
@@ -971,7 +1202,7 @@ class _PickDetailScreenState extends ConsumerState<PickDetailScreen> {
         title: const Text('Edit Comment'),
         content: TextField(
           controller: editController,
-          maxLength: 1000,
+          maxLength: 3000,
           maxLines: 4,
           autofocus: true,
           decoration: InputDecoration(

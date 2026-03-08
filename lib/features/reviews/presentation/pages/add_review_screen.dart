@@ -69,80 +69,77 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
         return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: cs.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: cs.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Add Media',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20),
-              ListTile(
-                leading: Icon(
-                  Icons.photo_library,
-                  color: cs.primary,
+                const SizedBox(height: 20),
+                const Text(
+                  'Add Media',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                title: const Text('Choose from Gallery'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final images = await picker.pickMultiImage(
-                    imageQuality: 80,
-                    maxWidth: 1920,
-                  );
-                  if (images.isNotEmpty) {
-                    setState(() {
-                      for (final img in images) {
-                        if (_mediaFiles.length < 5) {
-                          _mediaFiles.add(File(img.path));
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: Icon(Icons.photo_library, color: cs.primary),
+                  title: const Text('Choose from Gallery'),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final images = await picker.pickMultiImage(
+                      imageQuality: 80,
+                      maxWidth: 1920,
+                    );
+                    if (images.isNotEmpty) {
+                      setState(() {
+                        for (final img in images) {
+                          if (_mediaFiles.length < 5) {
+                            _mediaFiles.add(File(img.path));
+                          }
                         }
-                      }
-                    });
-                  }
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.camera_alt, color: cs.primary),
-                title: const Text('Take Photo'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final photo = await picker.pickImage(
-                    source: ImageSource.camera,
-                    imageQuality: 80,
-                  );
-                  if (photo != null) {
-                    setState(() => _mediaFiles.add(File(photo.path)));
-                  }
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.videocam, color: cs.primary),
-                title: const Text('Record Video'),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  final video = await picker.pickVideo(
-                    source: ImageSource.camera,
-                    maxDuration: const Duration(seconds: 60),
-                  );
-                  if (video != null) {
-                    setState(() => _mediaFiles.add(File(video.path)));
-                  }
-                },
-              ),
-            ],
+                      });
+                    }
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.camera_alt, color: cs.primary),
+                  title: const Text('Take Photo'),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final photo = await picker.pickImage(
+                      source: ImageSource.camera,
+                      imageQuality: 80,
+                    );
+                    if (photo != null) {
+                      setState(() => _mediaFiles.add(File(photo.path)));
+                    }
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.videocam, color: cs.primary),
+                  title: const Text('Record Video'),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final video = await picker.pickVideo(
+                      source: ImageSource.camera,
+                      maxDuration: const Duration(seconds: 60),
+                    );
+                    if (video != null) {
+                      setState(() => _mediaFiles.add(File(video.path)));
+                    }
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
-      );
+        );
       },
     );
   }
@@ -178,7 +175,9 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
-        LatLng tempLocation = _selectedLocation;        final sheetCs = Theme.of(ctx).colorScheme;        return StatefulBuilder(
+        LatLng tempLocation = _selectedLocation;
+        final sheetCs = Theme.of(ctx).colorScheme;
+        return StatefulBuilder(
           builder: (context, setModalState) {
             return SizedBox(
               height: MediaQuery.of(context).size.height * 0.75,
@@ -224,7 +223,10 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
                       'Tap on the map to select location',
-                      style: TextStyle(fontSize: 13, color: sheetCs.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: sheetCs.onSurfaceVariant,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -385,7 +387,11 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
               ),
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
-                decoration: _inputDecoration('Select category', cs, prefixIcon: Icons.grid_view_rounded),
+                decoration: _inputDecoration(
+                  'Select category',
+                  cs,
+                  prefixIcon: Icons.grid_view_rounded,
+                ),
                 items: _categories
                     .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                     .toList(),
@@ -516,7 +522,10 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
               ),
               const SizedBox(height: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 20,
+                ),
                 decoration: BoxDecoration(
                   color: cs.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(16),
@@ -580,7 +589,7 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
               TextFormField(
                 controller: _descriptionController,
                 maxLines: 5,
-                maxLength: 1000,
+                maxLength: 3000,
                 decoration: _inputDecoration(
                   'What did you love? What could be better? Share details about the food, service, ambience...',
                   cs,
@@ -768,10 +777,7 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: TextStyle(
-              fontSize: 12,
-              color: cs.onSurfaceVariant,
-            ),
+            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
           ),
         ],
       ],
@@ -785,7 +791,10 @@ class _AddReviewScreenState extends ConsumerState<AddReviewScreen> {
   }) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: cs.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 14),
+      hintStyle: TextStyle(
+        color: cs.onSurfaceVariant.withValues(alpha: 0.6),
+        fontSize: 14,
+      ),
       prefixIcon: prefixIcon != null
           ? Icon(prefixIcon, color: cs.onSurfaceVariant, size: 20)
           : null,

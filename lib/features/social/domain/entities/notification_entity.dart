@@ -11,6 +11,7 @@ class NotificationEntity extends Equatable {
   final NotificationType type;
   final String status; // success, error, info, warning
   final String? pickId;
+  final String? about;
   final String message;
   final bool read;
   final DateTime createdAt;
@@ -24,6 +25,7 @@ class NotificationEntity extends Equatable {
     required this.type,
     this.status = 'info',
     this.pickId,
+    this.about,
     required this.message,
     this.read = false,
     required this.createdAt,

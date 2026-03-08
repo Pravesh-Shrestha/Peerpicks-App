@@ -66,7 +66,7 @@ class PicksRemoteDataSourceImpl implements IPicksDataSource {
     final formData = FormData.fromMap({
       'placeInfo': placeInfo,
       'reviewInfo': reviewInfo,
-      'files': await Future.wait(
+      'images': await Future.wait(
         mediaFiles.map(
           (file) async => await MultipartFile.fromFile(
             file.path,
@@ -116,6 +116,40 @@ class PicksRemoteDataSourceImpl implements IPicksDataSource {
   }
 
   @override
+  Future<PickModel> updatePick({
+    required String id,
+    required String alias,
+    required String description,
+    required double stars,
+  }) async {
+    final response = await client.patch(
+      ApiEndpoints.updatePick(id),
+      data: {'alias': alias, 'description': description, 'stars': stars},
+    );
+
+    if (response.statusCode == 200) {
+      return PickModel.fromJson(response.data['data']);
+    }
+
+    return PickModel(
+      id: id,
+      userId: '',
+      placeId: '',
+      alias: alias,
+      stars: stars,
+      description: description,
+      mediaUrls: const [],
+      upvoteCount: 0,
+      downvoteCount: 0,
+      commentCount: 0,
+      latitude: 0,
+      longitude: 0,
+      createdAt: DateTime.now(),
+      tags: const [],
+    );
+  }
+
+  @override
   Future<bool> deletePick(String id) async {
     final response = await client.delete(ApiEndpoints.deletePick(id));
     return response.statusCode == 200;
@@ -162,8 +196,9 @@ class PicksRemoteDataSourceImpl implements IPicksDataSource {
       final payload = response.data['data'];
       if (payload is Map<String, dynamic>) {
         final List picksData = payload['picks'] as List? ?? [];
-        final picks =
-            picksData.map((json) => PickModel.fromJson(json)).toList();
+        final picks = picksData
+            .map((json) => PickModel.fromJson(json))
+            .toList();
         final profile = payload['profile'] as Map<String, dynamic>? ?? {};
         return {'profile': profile, 'picks': picks};
       }

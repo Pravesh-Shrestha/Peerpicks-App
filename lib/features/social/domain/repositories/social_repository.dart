@@ -4,11 +4,13 @@ import 'package:peerpicks/features/social/domain/entities/comment_entity.dart';
 import 'package:peerpicks/features/picks/domain/entities/pick_entity.dart';
 
 abstract interface class ISocialRepository {
-  /// Toggle upvote on a pick — returns true if now upvoted
-  Future<Either<Failure, bool>> toggleVote(String pickId);
+  /// Toggle upvote on a pick — returns {isUpvoted, upvoteCount}
+  Future<Either<Failure, Map<String, dynamic>>> toggleVote(String pickId);
 
   /// Toggle follow/unfollow — returns {isFollowing, followerCount, followingCount}
-  Future<Either<Failure, Map<String, dynamic>>> toggleFollow(String targetUserId);
+  Future<Either<Failure, Map<String, dynamic>>> toggleFollow(
+    String targetUserId,
+  );
 
   /// Toggle favorite/bookmark — returns true if now favorited
   Future<Either<Failure, bool>> toggleFavorite(String pickId);

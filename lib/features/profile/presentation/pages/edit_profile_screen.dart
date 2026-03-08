@@ -8,7 +8,6 @@ import 'package:peerpicks/core/api/api_client.dart';
 import 'package:peerpicks/core/api/api_endpoints.dart';
 import 'package:peerpicks/core/services/storage/user_session_service.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:peerpicks/common/app_colors.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -79,10 +78,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               ),
             ),
             ListTile(
-              leading: Icon(
-                Icons.camera_alt_rounded,
-                color: cs.primary,
-              ),
+              leading: Icon(Icons.camera_alt_rounded, color: cs.primary),
               title: const Text('Take a Photo'),
               onTap: () {
                 Navigator.pop(context);
@@ -90,10 +86,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               },
             ),
             ListTile(
-              leading: Icon(
-                Icons.photo_library_rounded,
-                color: cs.primary,
-              ),
+              leading: Icon(Icons.photo_library_rounded, color: cs.primary),
               title: const Text('Choose from Gallery'),
               onTap: () {
                 Navigator.pop(context);
@@ -107,22 +100,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _handleImagePick(ImageSource source) async {
-    PermissionStatus status = source == ImageSource.camera
-        ? await Permission.camera.request()
-        : (Platform.isAndroid
-              ? await Permission.photos.request()
-              : await Permission.photos.request());
-
-    if (status.isGranted) {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: source,
-        imageQuality: 75,
-      );
-      if (pickedFile != null) {
-        setState(() => _imageFile = File(pickedFile.path));
+    // Camera needs runtime permission. Gallery selection can use the system
+    // picker on Android and does not require explicit permission requests.
+    if (source == ImageSource.camera) {
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        if (status.isPermanentlyDenied) {
+          _showSettingsDialog();
+        }
+        return;
       }
-    } else if (status.isPermanentlyDenied) {
-      _showSettingsDialog();
+    }
+
+    final XFile? pickedFile = await _picker.pickImage(
+      source: source,
+      imageQuality: 75,
+    );
+    if (pickedFile != null) {
+      setState(() => _imageFile = File(pickedFile.path));
     }
   }
 
@@ -143,17 +138,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ],
       ),
     );
-  }
-
-  void _handleLogout() async {
-    await ref.read(userSessionServiceProvider).clearSession();
-    if (mounted) {
-      // Navigate to Login Screen and clear navigation stack
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Session expired. Please login again.")),
-      );
-    }
   }
 
   // --- REFACTORED API UPLOAD LOGIC ---
@@ -191,8 +175,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         );
       }
 
-      // 3. Use our global ApiClient (Interceptors handle the token automatically)
-      final response = await apiClient.post(
+      // 3. Backend route expects PUT /api/auth/update-profile
+      final response = await apiClient.put(
         ApiEndpoints.updateProfile,
         data: formData,
       );
@@ -218,13 +202,30 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         }
       }
     } on DioException catch (e) {
-      final errorMsg = e.response?.data['message'] ?? "Update failed";
+      final errorMsg = _extractDioErrorMessage(e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  String _extractDioErrorMessage(DioException e) {
+    final data = e.response?.data;
+    if (data is Map<String, dynamic>) {
+      final message = data['message'];
+      if (message is String && message.trim().isNotEmpty) {
+        return message;
+      }
+    }
+    if (data is String && data.trim().isNotEmpty) {
+      if (data.contains('Cannot') && data.contains('/api/')) {
+        return 'Profile update route is not available on the server.';
+      }
+      return 'Update failed. Please try again.';
+    }
+    return 'Update failed. Please try again.';
   }
   // --- UI COMPONENTS ---
 
@@ -241,10 +242,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ),
         title: Text(
           'Edit Profile',
-          style: TextStyle(
-            color: cs.onSurface,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -302,7 +300,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   ? FileImage(_imageFile!)
                   : (serverImagePath != null
                             ? NetworkImage(
-                                "${ApiEndpoints.serverBaseUrl}$serverImagePath",
+                                ApiEndpoints.resolveServerUrl(serverImagePath),
                               )
                             : null)
                         as ImageProvider?,
@@ -329,11 +327,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   color: cs.onSurface,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  Icons.camera_alt,
-                  color: cs.surface,
-                  size: 20,
-                ),
+                child: Icon(Icons.camera_alt, color: cs.surface, size: 20),
               ),
             ),
           ),
@@ -411,10 +405,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: cs.surface,
-                prefixIcon: Icon(
-                  Icons.calendar_today,
-                  color: cs.primary,
-                ),
+                prefixIcon: Icon(Icons.calendar_today, color: cs.primary),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,

@@ -25,42 +25,17 @@ class UserProfileViewScreen extends ConsumerStatefulWidget {
       _UserProfileViewScreenState();
 }
 
-class _UserProfileViewScreenState extends ConsumerState<UserProfileViewScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _UserProfileViewScreenState extends ConsumerState<UserProfileViewScreen> {
   bool _hasSyncedFollow = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     Future.microtask(() {
       ref
           .read(picksViewModelProvider.notifier)
           .getUserProfileWithPicks(widget.userId);
     });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  static bool _isVideo(String url) {
-    final lower = url.toLowerCase();
-    return lower.endsWith('.mp4') ||
-        lower.endsWith('.mov') ||
-        lower.endsWith('.webm') ||
-        lower.endsWith('.mpeg') ||
-        lower.endsWith('.avi');
-  }
-
-  static String? _firstImageUrl(PickEntity pick) {
-    for (final url in pick.mediaUrls) {
-      if (!_isVideo(url)) return url;
-    }
-    return null;
   }
 
   String _formatCount(dynamic count) {
@@ -83,8 +58,10 @@ class _UserProfileViewScreenState extends ConsumerState<UserProfileViewScreen>
     final displayAvatar = profile?['profilePicture'] ?? widget.userAvatar;
     // Use live counts from last toggle if available, else server profile
     final lastCounts = socialState.lastFollowCounts;
-    final followerCount = lastCounts?['followerCount'] ?? profile?['followerCount'] ?? 0;
-    final followingCount = lastCounts?['followingCount'] ?? profile?['followingCount'] ?? 0;
+    final followerCount =
+        lastCounts?['followerCount'] ?? profile?['followerCount'] ?? 0;
+    final followingCount =
+        lastCounts?['followingCount'] ?? profile?['followingCount'] ?? 0;
     final picksCount = picksState.picks.length;
 
     // Sync isFollowing from server once
@@ -92,93 +69,126 @@ class _UserProfileViewScreenState extends ConsumerState<UserProfileViewScreen>
       final serverIsFollowing = profile['isFollowing'] as bool? ?? false;
       _hasSyncedFollow = true;
       Future.microtask(() {
-        ref.read(socialViewModelProvider.notifier).syncFollowFromProfile(
-              widget.userId,
-              serverIsFollowing,
-            );
+        ref
+            .read(socialViewModelProvider.notifier)
+            .syncFollowFromProfile(widget.userId, serverIsFollowing);
       });
     }
 
     return Scaffold(
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          // ── App bar ──
-          SliverAppBar(
-            pinned: true,
-            elevation: 0.5,
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back, color: cs.onSurface),
-              onPressed: () => Navigator.pop(context),
-            ),
-            title: Text(
-              displayName,
-              style: TextStyle(
-                color: cs.onSurface,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-            centerTitle: false,
+      appBar: AppBar(
+        elevation: 0.5,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: cs.onSurface),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          displayName,
+          style: TextStyle(
+            color: cs.onSurface,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
           ),
-
-          // ── Profile header ──
+        ),
+      ),
+      body: CustomScrollView(
+        slivers: [
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Avatar + stats
-                  Row(
-                    children: [
-                      // Avatar
-                      CircleAvatar(
-                        radius: 42,
-                        backgroundColor: cs.outlineVariant,
-                        backgroundImage: displayAvatar != null
-                            ? CachedNetworkImageProvider(
-                                ApiEndpoints.resolveServerUrl(displayAvatar),
-                              )
-                            : null,
-                        child: displayAvatar == null
-                            ? Text(
-                                displayName[0].toUpperCase(),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: cs.outlineVariant),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 38,
+                          backgroundColor: cs.outlineVariant,
+                          backgroundImage: displayAvatar != null
+                              ? CachedNetworkImageProvider(
+                                  ApiEndpoints.resolveServerUrl(displayAvatar),
+                                )
+                              : null,
+                          child: displayAvatar == null
+                              ? Text(
+                                  displayName[0].toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                    color: cs.primary,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                displayName,
                                 style: TextStyle(
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.bold,
-                                  color: cs.primary,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                  color: cs.onSurface,
                                 ),
-                              )
-                            : null,
-                      ),
-                      const Spacer(),
-                      _StatColumn(value: picksCount.toString(), label: 'Picks'),
-                      const SizedBox(width: 24),
-                      _StatColumn(
-                        value: _formatCount(followerCount),
-                        label: 'Followers',
-                      ),
-                      const SizedBox(width: 24),
-                      _StatColumn(
-                        value: _formatCount(followingCount),
-                        label: 'Following',
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Name
-                  Text(
-                    displayName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: cs.primary.withOpacity(0.14),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  'PeerPicks Explorer',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: cs.primary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-
-                  // Action buttons
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _StatColumn(
+                          value: picksCount.toString(),
+                          label: 'Picks',
+                        ),
+                      ),
+                      Expanded(
+                        child: _StatColumn(
+                          value: _formatCount(followerCount),
+                          label: 'Followers',
+                        ),
+                      ),
+                      Expanded(
+                        child: _StatColumn(
+                          value: _formatCount(followingCount),
+                          label: 'Following',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -190,79 +200,24 @@ class _UserProfileViewScreenState extends ConsumerState<UserProfileViewScreen>
                               .toggleFollow(widget.userId),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _ActionButton(
-                          label: 'Message',
-                          filled: false,
-                          onTap: () {},
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        height: 36,
-                        width: 36,
-                        decoration: BoxDecoration(
-                          color: cs.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: cs.outlineVariant),
-                        ),
-                        child: Icon(
-                          Icons.person_add_outlined,
-                          size: 18,
-                          color: cs.onSurface,
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Tab bar ──
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _StickyTabBarDelegate(
-              TabBar(
-                controller: _tabController,
-                labelColor: cs.onSurface,
-                unselectedLabelColor: cs.onSurfaceVariant,
-                indicatorColor: cs.onSurface,
-                indicatorWeight: 1.5,
-                tabs: const [
-                  Tab(icon: Icon(Icons.grid_on, size: 22)),
-                  Tab(icon: Icon(Icons.bookmark_border, size: 22)),
-                ],
-              ),
-            ),
-          ),
-        ],
-
-        // ── Tab views ──
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            // Grid tab
-            _buildPicksGrid(picksState),
-            // Saved tab (placeholder)
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.bookmark_border,
-                      size: 48, color: cs.outlineVariant),
-                  const SizedBox(height: 12),
                   Text(
-                    'No saved picks',
-                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 15),
+                    'PeerPicks Board',
+                    style: TextStyle(
+                      color: cs.onSurface,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
+                  const SizedBox(height: 8),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+          _buildPicksGrid(picksState),
+        ],
       ),
     );
   }
@@ -270,49 +225,57 @@ class _UserProfileViewScreenState extends ConsumerState<UserProfileViewScreen>
   Widget _buildPicksGrid(PicksState picksState) {
     final cs = Theme.of(context).colorScheme;
     if (picksState.status == PicksStatus.loading) {
-      return Center(
-        child: CircularProgressIndicator(color: cs.primary),
+      return SliverFillRemaining(
+        child: Center(child: CircularProgressIndicator(color: cs.primary)),
       );
     }
 
     if (picksState.picks.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.camera_alt_outlined, size: 52, color: cs.outlineVariant),
-            const SizedBox(height: 16),
-            Text(
-              'No picks yet',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurface,
+      return SliverFillRemaining(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.camera_alt_outlined,
+                size: 52,
+                color: cs.outlineVariant,
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'When this user shares picks, they will appear here.',
-              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                'No picks yet',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'When this user shares picks, they will appear here.',
+                style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(1),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 1.5,
-        mainAxisSpacing: 1.5,
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      sliver: SliverGrid(
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final pick = picksState.picks[index];
+          return _GridPickTile(pick: pick);
+        }, childCount: picksState.picks.length),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 0.92,
+        ),
       ),
-      itemCount: picksState.picks.length,
-      itemBuilder: (context, index) {
-        final pick = picksState.picks[index];
-        return _GridPickTile(pick: pick);
-      },
     );
   }
 }
@@ -337,7 +300,10 @@ class _StatColumn extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          style: TextStyle(
+            fontSize: 13,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -385,29 +351,7 @@ class _ActionButton extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Sticky TabBar Delegate
-// ─────────────────────────────────────────────────────────────
-class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
-  final TabBar tabBar;
-  _StickyTabBarDelegate(this.tabBar);
-
-  @override
-  double get minExtent => tabBar.preferredSize.height;
-  @override
-  double get maxExtent => tabBar.preferredSize.height;
-
-  @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(color: Theme.of(context).colorScheme.surface, child: tabBar);
-  }
-
-  @override
-  bool shouldRebuild(covariant _StickyTabBarDelegate oldDelegate) => false;
-}
-
-// ─────────────────────────────────────────────────────────────
-// Grid Pick Tile (Instagram-style square tile)
+// Grid Pick Tile
 // ─────────────────────────────────────────────────────────────
 class _GridPickTile extends StatelessWidget {
   final PickEntity pick;
@@ -443,55 +387,113 @@ class _GridPickTile extends StatelessWidget {
           MaterialPageRoute(builder: (_) => PickDetailScreen(pickId: pick.id)),
         );
       },
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (imageUrl != null)
-            CachedNetworkImage(
-              imageUrl: ApiEndpoints.resolveServerUrl(imageUrl),
-              fit: BoxFit.cover,
-              placeholder: (_, __) => Container(color: cs.surfaceContainerHighest),
-              errorWidget: (_, __, ___) => Container(
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: cs.outlineVariant),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (imageUrl != null)
+              CachedNetworkImage(
+                imageUrl: ApiEndpoints.resolveServerUrl(imageUrl),
+                fit: BoxFit.cover,
+                placeholder: (_, __) =>
+                    Container(color: cs.surfaceContainerHighest),
+                errorWidget: (_, __, ___) => Container(
+                  color: cs.surfaceContainerHighest,
+                  child: Icon(Icons.broken_image, color: cs.onSurfaceVariant),
+                ),
+              )
+            else
+              Container(
                 color: cs.surfaceContainerHighest,
-                child: Icon(Icons.broken_image, color: cs.onSurfaceVariant),
+                child: Center(
+                  child: Icon(
+                    hasVideo ? Icons.videocam_rounded : Icons.place_rounded,
+                    color: cs.outlineVariant,
+                    size: 28,
+                  ),
+                ),
               ),
-            )
-          else
-            Container(
-              color: cs.surfaceContainerHighest,
-              child: Center(
-                child: Icon(
-                  hasVideo ? Icons.videocam_rounded : Icons.place_rounded,
-                  color: cs.outlineVariant,
-                  size: 28,
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.0),
+                      Colors.black.withOpacity(0.55),
+                    ],
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        pick.alias,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Icon(
+                      Icons.thumb_up_alt_rounded,
+                      size: 13,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      '${pick.upvoteCount}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          // Multi-image badge
-          if (pick.mediaUrls.length > 1)
-            const Positioned(
-              top: 6,
-              right: 6,
-              child: Icon(
-                Icons.collections_rounded,
-                color: Colors.white,
-                size: 18,
-                shadows: [Shadow(blurRadius: 4)],
+            if (pick.mediaUrls.length > 1)
+              const Positioned(
+                top: 8,
+                right: 8,
+                child: Icon(
+                  Icons.collections_rounded,
+                  color: Colors.white,
+                  size: 18,
+                  shadows: [Shadow(blurRadius: 4)],
+                ),
               ),
-            ),
-          // Video badge
-          if (hasVideo && imageUrl != null)
-            const Positioned(
-              top: 6,
-              left: 6,
-              child: Icon(
-                Icons.videocam_rounded,
-                color: Colors.white,
-                size: 18,
-                shadows: [Shadow(blurRadius: 4)],
+            if (hasVideo && imageUrl != null)
+              const Positioned(
+                top: 8,
+                left: 8,
+                child: Icon(
+                  Icons.videocam_rounded,
+                  color: Colors.white,
+                  size: 18,
+                  shadows: [Shadow(blurRadius: 4)],
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

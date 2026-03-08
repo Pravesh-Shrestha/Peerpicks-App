@@ -18,6 +18,7 @@ import 'package:peerpicks/features/social/presentation/view_model/social_viewmod
 import 'package:peerpicks/features/dashboard/presentation/pages/search_screen.dart';
 import 'package:peerpicks/features/profile/presentation/pages/user_profile_view_screen.dart';
 import 'package:peerpicks/features/map/presentation/pages/nearby_picks_screen.dart';
+import 'package:peerpicks/core/services/connectivity/network_info.dart';
 import 'package:peerpicks/core/services/sensors/sensor_settings_provider.dart';
 import 'package:peerpicks/widgets/video_player_widget.dart';
 import 'package:peerpicks/core/services/storage/user_session_service.dart';
@@ -99,6 +100,56 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       if (!_isVideo(url)) return url;
     }
     return null;
+  }
+
+  static String? _firstVideoUrl(PickEntity pick) {
+    for (final url in pick.mediaUrls) {
+      if (_isVideo(url)) return url;
+    }
+    return null;
+  }
+
+  /// Build a lightweight thumbnail URL for video assets.
+  /// For Cloudinary videos, appending .jpg returns a poster frame.
+  static String? _videoThumbnailUrl(String? videoUrl) {
+    if (videoUrl == null || videoUrl.isEmpty) return null;
+    final resolved = ApiEndpoints.resolveServerUrl(videoUrl);
+
+    try {
+      final uri = Uri.parse(resolved);
+      final isCloudinary = uri.host.contains('res.cloudinary.com');
+      final isVideoResource = uri.path.contains('/video/upload/');
+
+      if (isCloudinary && isVideoResource) {
+        final segments = List<String>.from(uri.pathSegments);
+        final uploadIdx = segments.indexOf('upload');
+        if (uploadIdx != -1) {
+          // Ask for the first frame thumbnail
+          segments.insert(uploadIdx + 1, 'so_0');
+        }
+        final last = segments.removeLast();
+        final baseName = last.replaceFirst(RegExp(r'\.[^./]+$'), '');
+        segments.add('$baseName.jpg');
+        return uri
+            .replace(pathSegments: segments, query: null, fragment: null)
+            .toString();
+      }
+
+      // Fallback: swap extension with .jpg
+      final cleanPath = uri.path.replaceFirst(RegExp(r'\.[^./]+$'), '');
+      final jpgPath = '$cleanPath.jpg';
+      return uri.replace(path: jpgPath, query: null, fragment: null).toString();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Choose an image or a derived video thumbnail to preview.
+  static String? _previewUrl(PickEntity pick) {
+    final img = _firstImageUrl(pick);
+    if (img != null) return img;
+    final vid = _firstVideoUrl(pick);
+    return _videoThumbnailUrl(vid);
   }
 
   void _configureMotion(SensorSettingsState settings) {
@@ -218,6 +269,36 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
+  Widget _buildOfflineCacheBanner() {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: cs.tertiaryContainer,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.wifi_off_rounded, size: 18, color: cs.onTertiaryContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'You are offline. Showing cached content.',
+              style: TextStyle(
+                color: cs.onTertiaryContainer,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildNearbyPicksCard() {
     final cs = Theme.of(context).colorScheme;
     return Padding(
@@ -325,14 +406,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     return image;
   }
 
-  String _timeAgo(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inDays > 365) return '${(diff.inDays / 365).floor()}y ago';
-    if (diff.inDays > 30) return '${(diff.inDays / 30).floor()}mo ago';
-    if (diff.inDays > 0) return '${diff.inDays}d ago';
-    if (diff.inHours > 0) return '${diff.inHours}h ago';
-    if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
-    return 'Just now';
+  String _formatPostedDate(DateTime dt) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final day = dt.day.toString().padLeft(2, '0');
+    final month = months[dt.month - 1];
+    final year = dt.year.toString();
+    return '$day $month $year';
   }
 
   Future<void> _openInMap(PickEntity pick) async {
@@ -392,6 +484,123 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showEditPickDialog(PickEntity pick) {
+    final cs = Theme.of(context).colorScheme;
+    final aliasController = TextEditingController(text: pick.alias);
+    final descriptionController = TextEditingController(text: pick.description);
+    double stars = pick.stars;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Edit Pick'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: aliasController,
+                  maxLength: 120,
+                  decoration: InputDecoration(
+                    labelText: 'Place Alias',
+                    counterText: '',
+                    filled: true,
+                    fillColor: cs.surfaceContainerHighest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: cs.outlineVariant),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: descriptionController,
+                  maxLength: 3000,
+                  maxLines: 5,
+                  decoration: InputDecoration(
+                    labelText: 'Description',
+                    hintText: 'Write in detail — emojis are supported.',
+                    counterText: '',
+                    filled: true,
+                    fillColor: cs.surfaceContainerHighest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: cs.outlineVariant),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Rating: ${stars.toStringAsFixed(1)}',
+                  style: TextStyle(
+                    color: cs.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Slider(
+                  value: stars,
+                  min: 1,
+                  max: 5,
+                  divisions: 8,
+                  label: stars.toStringAsFixed(1),
+                  onChanged: (value) {
+                    setDialogState(() => stars = value);
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: cs.onSurfaceVariant),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                final alias = aliasController.text.trim();
+                final description = descriptionController.text.trim();
+                if (alias.isEmpty || description.isEmpty) {
+                  return;
+                }
+                Navigator.pop(ctx);
+                await ref
+                    .read(picksViewModelProvider.notifier)
+                    .updatePick(
+                      id: pick.id,
+                      alias: alias,
+                      description: description,
+                      stars: stars,
+                    );
+                if (!mounted) return;
+                final status = ref.read(picksViewModelProvider).status;
+                if (status == PicksStatus.updated) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Pick updated successfully'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              child: const Text(
+                'Save',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -507,8 +716,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   Widget build(BuildContext context) {
     final authState = ref.watch(authViewModelProvider);
     final user = authState.user;
+    final userSession = ref.watch(userSessionServiceProvider);
+    final displayName =
+        userSession.getCurrentUserFullName() ?? user?.fullName ?? 'there';
+    final displayAvatar =
+        userSession.getCurrentUserProfilePicture() ?? user?.profilePicture;
     final picksState = ref.watch(picksViewModelProvider);
     final sensorState = ref.watch(sensorSettingsProvider);
+    final isOffline = ref
+        .watch(connectivityStatusProvider)
+        .maybeWhen(data: (isConnected) => !isConnected, orElse: () => false);
     final screenWidth = MediaQuery.of(context).size.width;
     final isTablet = screenWidth > 600;
 
@@ -525,12 +742,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             CircleAvatar(
               radius: isTablet ? 24 : 20,
               backgroundColor: cs.surfaceContainerHighest,
-              backgroundImage: user?.profilePicture != null
+              backgroundImage: displayAvatar != null
                   ? CachedNetworkImageProvider(
-                      ApiEndpoints.resolveServerUrl(user!.profilePicture!),
+                      ApiEndpoints.resolveServerUrl(displayAvatar),
                     )
                   : null,
-              child: user?.profilePicture == null
+              child: displayAvatar == null
                   ? Icon(
                       Icons.person_rounded,
                       color: cs.onSurfaceVariant,
@@ -544,7 +761,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Hello, ${user?.fullName.split(' ')[0] ?? 'there'}',
+                    'Hello, ${displayName.split(' ')[0]}',
                     style: TextStyle(
                       color: cs.onSurface,
                       fontWeight: FontWeight.w600,
@@ -594,11 +811,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildPopularTab(picksState),
-          _buildForYouTab(picksState, sensorState),
+          if (isOffline) _buildOfflineCacheBanner(),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildPopularTab(picksState),
+                _buildForYouTab(picksState, sensorState),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -646,9 +870,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   Widget _buildFeaturedCarousel(List<PickEntity> picks) {
     final featured = picks
-        .where(
-          (p) => p.mediaUrls.isNotEmpty && p.mediaUrls.any((u) => !_isVideo(u)),
-        )
+        .where((p) => p.mediaUrls.isNotEmpty && _previewUrl(p) != null)
         .take(5)
         .toList();
     if (featured.isEmpty) return _buildCarouselSkeleton();
@@ -667,7 +889,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       ),
       itemBuilder: (context, index, realIndex) {
         final pick = featured[index];
-        final imgUrl = _firstImageUrl(pick);
+        final previewUrl = _previewUrl(pick);
         return GestureDetector(
           onTap: () => Navigator.push(
             context,
@@ -685,7 +907,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (imgUrl != null) networkImage(imgUrl),
+                  if (previewUrl != null) networkImage(previewUrl),
                   Positioned(
                     bottom: 0,
                     left: 0,
@@ -779,7 +1001,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         itemCount: picks.length,
         itemBuilder: (context, index) {
           final pick = picks[index];
-          final imgUrl = _firstImageUrl(pick);
+          final previewUrl = _previewUrl(pick);
           return GestureDetector(
             onTap: () => Navigator.push(
               context,
@@ -803,9 +1025,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   SizedBox(
                     height: isTablet ? 150 : 120,
                     width: double.infinity,
-                    child: imgUrl != null
+                    child: previewUrl != null
                         ? networkImage(
-                            imgUrl,
+                            previewUrl!,
                             borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(14),
                             ),
@@ -1068,6 +1290,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final socialState = ref.watch(socialViewModelProvider);
     final hasMedia = pick.mediaUrls.isNotEmpty;
     final isLiked = socialState.votedPickIds.contains(pick.id);
+    final initialLiked = pick.hasUpvoted;
+    final displayedUpvoteCount = isLiked == initialLiked
+        ? pick.upvoteCount
+        : pick.upvoteCount + (isLiked ? 1 : -1);
     final isSaved = socialState.favoritedPickIds.contains(pick.id);
     final isTablet = MediaQuery.of(context).size.width > 600;
     final mediaHeight = isTablet ? 420.0 : 350.0;
@@ -1152,7 +1378,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            _timeAgo(pick.createdAt),
+                            _formatPostedDate(pick.createdAt),
                             style: TextStyle(
                               fontSize: isTablet ? 12 : 11,
                               color: Theme.of(
@@ -1213,12 +1439,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                         if (value == 'delete') {
                           _showDeleteConfirmation(pick);
                         } else if (value == 'edit') {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Edit feature coming soon!'),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
+                          _showEditPickDialog(pick);
                         }
                       },
                       itemBuilder: (popupCtx) => [
@@ -1365,7 +1586,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     icon: isLiked
                         ? Icons.thumb_up_rounded
                         : Icons.thumb_up_alt_outlined,
-                    label: '${pick.upvoteCount}',
+                    label: '$displayedUpvoteCount',
                     isActive: isLiked,
                     onTap: () => ref
                         .read(socialViewModelProvider.notifier)

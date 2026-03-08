@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:peerpicks/features/picks/domain/entities/pick_entity.dart';
 import 'package:peerpicks/features/picks/domain/usecases/create_pick_usecase.dart';
 import 'package:peerpicks/features/picks/domain/usecases/delete_pick_usecase.dart';
 import 'package:peerpicks/features/picks/domain/usecases/get_discovery_feed_usecase.dart';
@@ -8,6 +9,7 @@ import 'package:peerpicks/features/picks/domain/usecases/get_pick_by_id_usecase.
 import 'package:peerpicks/features/picks/domain/usecases/get_picks_by_category_usecase.dart';
 import 'package:peerpicks/features/picks/domain/usecases/get_user_picks_usecase.dart';
 import 'package:peerpicks/features/picks/domain/usecases/search_picks_usecase.dart';
+import 'package:peerpicks/features/picks/domain/usecases/update_pick_usecase.dart';
 import 'package:peerpicks/features/picks/data/repositories/picks_repository.dart';
 import 'package:peerpicks/features/picks/presentation/state/picks_state.dart';
 
@@ -20,6 +22,7 @@ class PicksViewModel extends Notifier<PicksState> {
   late final CreatePickUsecase _createPickUsecase;
   late final GetPickByIdUsecase _getPickByIdUsecase;
   late final DeletePickUsecase _deletePickUsecase;
+  late final UpdatePickUsecase _updatePickUsecase;
   late final GetPicksByCategoryUsecase _getPicksByCategoryUsecase;
   late final GetUserPicksUsecase _getUserPicksUsecase;
   late final SearchPicksUsecase _searchPicksUsecase;
@@ -30,6 +33,7 @@ class PicksViewModel extends Notifier<PicksState> {
     _createPickUsecase = ref.read(createPickUsecaseProvider);
     _getPickByIdUsecase = ref.read(getPickByIdUsecaseProvider);
     _deletePickUsecase = ref.read(deletePickUsecaseProvider);
+    _updatePickUsecase = ref.read(updatePickUsecaseProvider);
     _getPicksByCategoryUsecase = ref.read(getPicksByCategoryUsecaseProvider);
     _getUserPicksUsecase = ref.read(getUserPicksUsecaseProvider);
     _searchPicksUsecase = ref.read(searchPicksUsecaseProvider);
@@ -126,6 +130,43 @@ class PicksViewModel extends Notifier<PicksState> {
     );
   }
 
+  Future<void> updatePick({
+    required String id,
+    required String alias,
+    required String description,
+    required double stars,
+  }) async {
+    state = state.copyWith(status: PicksStatus.loading);
+
+    final result = await _updatePickUsecase(
+      UpdatePickParams(
+        id: id,
+        alias: alias,
+        description: description,
+        stars: stars,
+      ),
+    );
+
+    result.fold(
+      (failure) => state = state.copyWith(
+        status: PicksStatus.error,
+        errorMessage: failure.message,
+      ),
+      (updatedPick) {
+        final updatedList = state.picks
+            .map((pick) => pick.id == id ? updatedPick : pick)
+            .toList();
+        state = state.copyWith(
+          status: PicksStatus.updated,
+          picks: updatedList,
+          selectedPick: state.selectedPick?.id == id
+              ? updatedPick
+              : state.selectedPick,
+        );
+      },
+    );
+  }
+
   Future<void> getPicksByCategory(String category, {int page = 1}) async {
     state = state.copyWith(status: PicksStatus.loading);
 
@@ -202,5 +243,45 @@ class PicksViewModel extends Notifier<PicksState> {
       (picks) =>
           state = state.copyWith(status: PicksStatus.loaded, picks: picks),
     );
+  }
+
+  void syncVoteForPick({
+    required String pickId,
+    required bool isUpvoted,
+    required int upvoteCount,
+  }) {
+    PickEntity apply(PickEntity pick) {
+      return PickEntity(
+        id: pick.id,
+        userId: pick.userId,
+        placeId: pick.placeId,
+        alias: pick.alias,
+        stars: pick.stars,
+        description: pick.description,
+        mediaUrls: pick.mediaUrls,
+        tags: pick.tags,
+        category: pick.category,
+        userName: pick.userName,
+        userProfilePicture: pick.userProfilePicture,
+        locationName: pick.locationName,
+        hasUpvoted: isUpvoted,
+        upvoteCount: upvoteCount,
+        downvoteCount: pick.downvoteCount,
+        commentCount: pick.commentCount,
+        latitude: pick.latitude,
+        longitude: pick.longitude,
+        createdAt: pick.createdAt,
+      );
+    }
+
+    final updatedPicks = state.picks
+        .map((pick) => pick.id == pickId ? apply(pick) : pick)
+        .toList();
+
+    final updatedSelected = state.selectedPick?.id == pickId
+        ? apply(state.selectedPick!)
+        : state.selectedPick;
+
+    state = state.copyWith(picks: updatedPicks, selectedPick: updatedSelected);
   }
 }

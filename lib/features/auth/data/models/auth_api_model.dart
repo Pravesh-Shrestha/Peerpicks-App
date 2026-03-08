@@ -69,12 +69,13 @@ class AuthApiModel {
   Map<String, dynamic> toJson() => {
     'fullName': fullName,
     'email': email,
-    'password': password,
+    if (password != null && password!.isNotEmpty) 'password': password,
     'gender': gender,
     'dob': dob.toIso8601String(),
-    'phone': phone,
+    'phone': phone.trim().replaceAll(RegExp(r'[\s\-\(\)]'), ''),
     'role': role,
-    'profilePicture': profilePicture,
+    if (profilePicture != null && profilePicture!.trim().isNotEmpty)
+      'profilePicture': profilePicture,
   };
 
   factory AuthApiModel.fromEntity(AuthEntity entity) => AuthApiModel(
@@ -82,10 +83,10 @@ class AuthApiModel {
     fullName: entity.fullName,
     email: entity.email,
     password: entity.password,
-    gender: entity.gender ?? '',
-    dob: entity.dob ?? DateTime.now(),
-    phone: entity.phone ?? '',
-    role: entity.role ?? 'user',
+    gender: entity.gender,
+    dob: entity.dob,
+    phone: entity.phone,
+    role: entity.role,
     token: entity.token,
     profilePicture: entity.profilePicture,
   );

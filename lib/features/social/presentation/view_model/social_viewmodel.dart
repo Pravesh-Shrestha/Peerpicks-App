@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:peerpicks/features/picks/domain/entities/pick_entity.dart';
+import 'package:peerpicks/features/picks/presentation/view_model/picks_viewmodel.dart';
 import 'package:peerpicks/features/social/data/repositories/social_repository.dart';
 import 'package:peerpicks/features/social/domain/repositories/social_repository.dart';
 import 'package:peerpicks/features/social/presentation/state/social_state.dart';
@@ -10,6 +11,8 @@ final socialViewModelProvider = NotifierProvider<SocialViewModel, SocialState>(
 
 class SocialViewModel extends Notifier<SocialState> {
   late final ISocialRepository _socialRepository;
+  final Set<String> _voteInFlight = <String>{};
+  final Set<String> _followInFlight = <String>{};
 
   @override
   SocialState build() {
@@ -34,6 +37,11 @@ class SocialViewModel extends Notifier<SocialState> {
 
   // ============ VOTING ============
   Future<void> toggleVote(String pickId) async {
+    if (_voteInFlight.contains(pickId)) {
+      return;
+    }
+    _voteInFlight.add(pickId);
+
     // Optimistic update
     final currentVoted = Set<String>.from(state.votedPickIds);
     if (currentVoted.contains(pickId)) {
@@ -44,28 +52,45 @@ class SocialViewModel extends Notifier<SocialState> {
     state = state.copyWith(votedPickIds: currentVoted);
 
     final result = await _socialRepository.toggleVote(pickId);
-    result.fold((failure) {
-      // Rollback
-      final rollback = Set<String>.from(state.votedPickIds);
-      if (rollback.contains(pickId)) {
-        rollback.remove(pickId);
-      } else {
-        rollback.add(pickId);
-      }
-      state = state.copyWith(
-        votedPickIds: rollback,
-        errorMessage: failure.message,
-      );
-    }, (isUpvoted) {
-      // Sync with server truth
-      final synced = Set<String>.from(state.votedPickIds);
-      if (isUpvoted) {
-        synced.add(pickId);
-      } else {
-        synced.remove(pickId);
-      }
-      state = state.copyWith(votedPickIds: synced);
-    });
+    result.fold(
+      (failure) {
+        // Rollback
+        final rollback = Set<String>.from(state.votedPickIds);
+        if (rollback.contains(pickId)) {
+          rollback.remove(pickId);
+        } else {
+          rollback.add(pickId);
+        }
+        state = state.copyWith(
+          votedPickIds: rollback,
+          errorMessage: failure.message,
+        );
+        _voteInFlight.remove(pickId);
+      },
+      (voteData) {
+        final isUpvoted = voteData['isUpvoted'] == true;
+        final upvoteCount = (voteData['upvoteCount'] as num?)?.toInt() ?? 0;
+
+        // Sync with server truth
+        final synced = Set<String>.from(state.votedPickIds);
+        if (isUpvoted) {
+          synced.add(pickId);
+        } else {
+          synced.remove(pickId);
+        }
+        state = state.copyWith(votedPickIds: synced);
+
+        ref
+            .read(picksViewModelProvider.notifier)
+            .syncVoteForPick(
+              pickId: pickId,
+              isUpvoted: isUpvoted,
+              upvoteCount: upvoteCount,
+            );
+
+        _voteInFlight.remove(pickId);
+      },
+    );
   }
 
   /// Sync follow state from a user-profile server response
@@ -84,6 +109,11 @@ class SocialViewModel extends Notifier<SocialState> {
 
   // ============ FOLLOW ============
   Future<void> toggleFollow(String targetUserId) async {
+    if (_followInFlight.contains(targetUserId)) {
+      return;
+    }
+    _followInFlight.add(targetUserId);
+
     final currentFollowed = Set<String>.from(state.followedUserIds);
     if (currentFollowed.contains(targetUserId)) {
       currentFollowed.remove(targetUserId);
@@ -105,6 +135,7 @@ class SocialViewModel extends Notifier<SocialState> {
           followedUserIds: rollback,
           errorMessage: failure.message,
         );
+        _followInFlight.remove(targetUserId);
       },
       (data) {
         final isFollowing = data['isFollowing'] as bool;
@@ -122,6 +153,7 @@ class SocialViewModel extends Notifier<SocialState> {
             'followingCount': data['followingCount'],
           },
         );
+        _followInFlight.remove(targetUserId);
       },
     );
   }

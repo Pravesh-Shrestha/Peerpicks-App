@@ -6,6 +6,7 @@ class ApiEndpoints {
 
   static const bool isPhysicalDevice = true;
   static const String compIpAddress = "192.168.0.104";
+  // static const String compIpAddress = "192.168.1.92";
 
   static String get baseUrl {
     if (isPhysicalDevice) {
@@ -42,6 +43,7 @@ class ApiEndpoints {
   static const String discoveryFeed = 'picks/feed';
   static const String searchPicks = 'picks/search';
   static String pickDetail(String id) => 'picks/$id';
+  static String updatePick(String id) => 'picks/$id';
   static String pickDiscussion(String id) => 'picks/$id/discussion';
   static String picksByUser(String userId) => 'picks/user/$userId';
   static String picksByCategory(String category) => 'picks/category/$category';

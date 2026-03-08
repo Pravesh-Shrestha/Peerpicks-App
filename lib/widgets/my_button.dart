@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:peerpicks/common/app_colors.dart';
 
 class MyButton extends StatelessWidget {
   final String text;

@@ -28,7 +28,9 @@ class SocialRepository implements ISocialRepository {
        _networkInfo = networkInfo;
 
   @override
-  Future<Either<Failure, bool>> toggleVote(String pickId) async {
+  Future<Either<Failure, Map<String, dynamic>>> toggleVote(
+    String pickId,
+  ) async {
     if (!await _networkInfo.isConnected) {
       return const Left(ApiFailure(message: 'No internet connection'));
     }
@@ -36,7 +38,12 @@ class SocialRepository implements ISocialRepository {
       final result = await _dataSource.toggleVote(pickId);
       final userStatus =
           result['data']?['userStatus'] ?? result['userStatus'] ?? 'cleared';
-      return Right(userStatus == 'upvoted');
+      final upvoteCount =
+          result['data']?['upvoteCount'] ?? result['upvoteCount'] ?? 0;
+      return Right({
+        'isUpvoted': userStatus == 'upvoted',
+        'upvoteCount': upvoteCount,
+      });
     } on DioException catch (e) {
       return Left(
         ApiFailure(
@@ -50,7 +57,9 @@ class SocialRepository implements ISocialRepository {
   }
 
   @override
-  Future<Either<Failure, Map<String, dynamic>>> toggleFollow(String targetUserId) async {
+  Future<Either<Failure, Map<String, dynamic>>> toggleFollow(
+    String targetUserId,
+  ) async {
     if (!await _networkInfo.isConnected) {
       return const Left(ApiFailure(message: 'No internet connection'));
     }

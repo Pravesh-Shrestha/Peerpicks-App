@@ -65,10 +65,15 @@ class _SignupPageState extends ConsumerState<SignupPage> {
         return;
       }
 
+      final normalizedPhone = _phoneController.text.trim().replaceAll(
+        RegExp(r'[\s\-\(\)]'),
+        '',
+      );
+
       final user = AuthEntity(
         fullName: _nameController.text.trim(),
         email: _emailController.text.trim(),
-        phone: _phoneController.text.trim(),
+        phone: normalizedPhone,
         password: _passwordController.text,
         gender: _selectedGender,
         dob: _selectedDate!,
@@ -116,11 +121,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
             ],
           ),
           child: IconButton(
-            icon: Icon(
-              Icons.arrow_back_ios_new,
-              color: cs.onSurface,
-              size: 20,
-            ),
+            icon: Icon(Icons.arrow_back_ios_new, color: cs.onSurface, size: 20),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -193,8 +194,23 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                   hint: '+977 98XXXXXXXX',
                   icon: Icons.phone_outlined,
                   keyboardType: TextInputType.phone,
-                  validator: (val) =>
-                      val!.isEmpty ? 'Enter phone number' : null,
+                  validator: (val) {
+                    final value = val?.trim() ?? '';
+                    if (value.isEmpty) {
+                      return 'Enter phone number';
+                    }
+                    final normalized = value.replaceAll(
+                      RegExp(r'[\s\-\(\)]'),
+                      '',
+                    );
+                    if (normalized.length < 10) {
+                      return 'Enter at least 10 digits';
+                    }
+                    if (!RegExp(r'^[0-9+]+$').hasMatch(normalized)) {
+                      return 'Phone can include only numbers and +';
+                    }
+                    return null;
+                  },
                   isDarkMode: isDarkMode,
                 ),
                 const SizedBox(height: 20),
@@ -390,8 +406,8 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                         ),
                       ),
                     ),
-                    validator: (val) => val!.length < 6
-                        ? 'Password must be at least 6 characters'
+                    validator: (val) => val!.length < 8
+                        ? 'Password must be at least 8 characters'
                         : null,
                   ),
                 ),
@@ -457,7 +473,10 @@ class _SignupPageState extends ConsumerState<SignupPage> {
                   children: [
                     Text(
                       'Already have an account? ',
-                      style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+                      style: TextStyle(
+                        color: cs.onSurfaceVariant,
+                        fontSize: 14,
+                      ),
                     ),
                     GestureDetector(
                       onTap: () => Navigator.pop(context),

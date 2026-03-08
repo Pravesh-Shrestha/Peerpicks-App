@@ -100,6 +100,10 @@ class ApiClient {
     return _dio.patch(path, data: data, options: options);
   }
 
+  Future<Response> put(String path, {dynamic data, Options? options}) async {
+    return _dio.put(path, data: data, options: options);
+  }
+
   // Protocol Compliance: Replaced all "purge" logic with "delete" [2026-02-01]
   Future<Response> delete(String path, {dynamic data, Options? options}) async {
     return _dio.delete(path, data: data, options: options);
