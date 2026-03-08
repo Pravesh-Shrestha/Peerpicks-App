@@ -100,22 +100,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Future<void> _handleImagePick(ImageSource source) async {
-    PermissionStatus status = source == ImageSource.camera
-        ? await Permission.camera.request()
-        : (Platform.isAndroid
-              ? await Permission.photos.request()
-              : await Permission.photos.request());
-
-    if (status.isGranted) {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: source,
-        imageQuality: 75,
-      );
-      if (pickedFile != null) {
-        setState(() => _imageFile = File(pickedFile.path));
+    // Camera needs runtime permission. Gallery selection can use the system
+    // picker on Android and does not require explicit permission requests.
+    if (source == ImageSource.camera) {
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        if (status.isPermanentlyDenied) {
+          _showSettingsDialog();
+        }
+        return;
       }
-    } else if (status.isPermanentlyDenied) {
-      _showSettingsDialog();
+    }
+
+    final XFile? pickedFile = await _picker.pickImage(
+      source: source,
+      imageQuality: 75,
+    );
+    if (pickedFile != null) {
+      setState(() => _imageFile = File(pickedFile.path));
     }
   }
 
@@ -173,8 +175,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         );
       }
 
-      // 3. Use our global ApiClient (Interceptors handle the token automatically)
-      final response = await apiClient.post(
+      // 3. Backend route expects PUT /api/auth/update-profile
+      final response = await apiClient.put(
         ApiEndpoints.updateProfile,
         data: formData,
       );
@@ -200,13 +202,30 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         }
       }
     } on DioException catch (e) {
-      final errorMsg = e.response?.data['message'] ?? "Update failed";
+      final errorMsg = _extractDioErrorMessage(e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  String _extractDioErrorMessage(DioException e) {
+    final data = e.response?.data;
+    if (data is Map<String, dynamic>) {
+      final message = data['message'];
+      if (message is String && message.trim().isNotEmpty) {
+        return message;
+      }
+    }
+    if (data is String && data.trim().isNotEmpty) {
+      if (data.contains('Cannot') && data.contains('/api/')) {
+        return 'Profile update route is not available on the server.';
+      }
+      return 'Update failed. Please try again.';
+    }
+    return 'Update failed. Please try again.';
   }
   // --- UI COMPONENTS ---
 
@@ -281,7 +300,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                   ? FileImage(_imageFile!)
                   : (serverImagePath != null
                             ? NetworkImage(
-                                "${ApiEndpoints.serverBaseUrl}$serverImagePath",
+                                ApiEndpoints.resolveServerUrl(serverImagePath),
                               )
                             : null)
                         as ImageProvider?,

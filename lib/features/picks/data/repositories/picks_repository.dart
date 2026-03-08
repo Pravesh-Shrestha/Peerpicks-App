@@ -74,8 +74,10 @@ class PicksRepository implements IPicksRepository {
       }
       return Left(
         ApiFailure(
-          message:
-              e.response?.data['message'] ?? 'Failed to load discovery feed',
+          message: _extractDioErrorMessage(
+            e,
+            fallback: 'Failed to load discovery feed',
+          ),
           statusCode: e.response?.statusCode,
         ),
       );
@@ -423,5 +425,19 @@ class PicksRepository implements IPicksRepository {
           DateTime.tryParse(map['createdAt']?.toString() ?? '') ??
           DateTime.now(),
     );
+  }
+
+  String _extractDioErrorMessage(DioException e, {required String fallback}) {
+    final data = e.response?.data;
+    if (data is Map<String, dynamic>) {
+      final message = data['message'];
+      if (message is String && message.trim().isNotEmpty) {
+        return message;
+      }
+    }
+    if (data is String && data.trim().isNotEmpty) {
+      return fallback;
+    }
+    return fallback;
   }
 }

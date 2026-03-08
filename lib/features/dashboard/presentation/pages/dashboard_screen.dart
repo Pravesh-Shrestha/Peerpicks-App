@@ -716,6 +716,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   Widget build(BuildContext context) {
     final authState = ref.watch(authViewModelProvider);
     final user = authState.user;
+    final userSession = ref.watch(userSessionServiceProvider);
+    final displayName =
+        userSession.getCurrentUserFullName() ?? user?.fullName ?? 'there';
+    final displayAvatar =
+        userSession.getCurrentUserProfilePicture() ?? user?.profilePicture;
     final picksState = ref.watch(picksViewModelProvider);
     final sensorState = ref.watch(sensorSettingsProvider);
     final isOffline = ref
@@ -737,12 +742,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             CircleAvatar(
               radius: isTablet ? 24 : 20,
               backgroundColor: cs.surfaceContainerHighest,
-              backgroundImage: user?.profilePicture != null
+              backgroundImage: displayAvatar != null
                   ? CachedNetworkImageProvider(
-                      ApiEndpoints.resolveServerUrl(user!.profilePicture!),
+                      ApiEndpoints.resolveServerUrl(displayAvatar),
                     )
                   : null,
-              child: user?.profilePicture == null
+              child: displayAvatar == null
                   ? Icon(
                       Icons.person_rounded,
                       color: cs.onSurfaceVariant,
@@ -756,7 +761,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Hello, ${user?.fullName.split(' ')[0] ?? 'there'}',
+                    'Hello, ${displayName.split(' ')[0]}',
                     style: TextStyle(
                       color: cs.onSurface,
                       fontWeight: FontWeight.w600,
